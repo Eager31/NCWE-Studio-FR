@@ -43,12 +43,9 @@ namespace NcweFr
         static Thread poller;
 
         // --- etat UI ---
-        static object popup, panelRoot, statusText, radiusBox, listPanel;
+        static object popup, panelRoot, statusText, radiusBox;
         static readonly Dictionary<string, object> buttons = new Dictionary<string, object>();
         static Delegate clickDelegate;
-        static string armedButton; static DateTime armedAt;
-        static int corner;            // 0 bas-centre, 1 bas-gauche, 2 haut-droite, 3 haut-gauche
-        static bool collapsed;
         static List<Group> shownGroups = new List<Group>();
 
         // ================= thread UI =================
@@ -71,7 +68,6 @@ namespace NcweFr
                 if (poller == null)
                 {
                     skipNames.Add(PanelName);
-                    LoadPanelSettings();
                     Type handler = FindType("Microsoft.UI.Xaml.RoutedEventHandler");
                     clickDelegate = Delegate.CreateDelegate(handler, typeof(Plugin).GetMethod("OnPanelClick", BindingFlags.NonPublic | BindingFlags.Static));
                     poller = new Thread(PollLoop); poller.IsBackground = true; poller.Name = "ncwe-fr-selection"; poller.Start();
@@ -152,7 +148,6 @@ namespace NcweFr
         }
 
         static DateTime lastStatusAt = DateTime.MinValue;
-        static bool treeDumped;
 
         // Diagnostic (NCWE_FR_TREE=1) : structure de l'interface dans arbre-ui.txt
         static void DumpTree(object content)
@@ -734,19 +729,6 @@ namespace NcweFr
             if (p != null) p.SetValue(o, v, null);
         }
 
-        // ---------- reglages ----------
-        static string SettingsPath { get { return Path.Combine(dir, "panneau-selection.txt"); } }
-        static void LoadPanelSettings()
-        {
-            try
-            {
-                if (!File.Exists(SettingsPath)) return;
-                string[] l = File.ReadAllText(SettingsPath).Trim().Split(';');
-                corner = int.Parse(l[0]) % 4; collapsed = l.Length > 1 && l[1] == "1";
-            }
-            catch { }
-        }
-        static void SavePanelSettings() { try { File.WriteAllText(SettingsPath, corner + ";" + (collapsed ? "1" : "0")); } catch { } }
     }
 
     // JSON minimal (objets -> Dictionary, tableaux -> List, nombres -> double).

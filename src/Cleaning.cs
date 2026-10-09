@@ -1,8 +1,8 @@
 // Outil "Nettoyage" (bouton balai dans la barre d'outils de NCWE) :
 //  - carte d'options : rayon (menu), familles a nettoyer (menu : familles par defaut + familles perso),
 //    creation d'une famille perso a partir des objets selectionnes
-//  - dans la vue 3D : un anneau suit la souris, les objets vises sont encadres en rouge a l'arret,
-//    un clic gauche les supprime (une etape d'annulation par clic, Ctrl+Z)
+//  - « Choisir le point » puis un clic au sol : anneau + objets vises en rouge, collisions invisibles en orange
+//  - « Nettoyer » : tout part en une suppression (un Ctrl+Z annule)
 // Familles par defaut : nettoyage.tsv. Familles perso : familles-perso.tsv. Meme format :
 //   famille <TAB> active (oui/non) <TAB> morceau du chemin du modele (minuscules)
 
@@ -35,9 +35,8 @@ namespace NcweFr
         static volatile string cleanStatusText = "";
         static volatile int cleanStatusVer, cleanShownVer = -1;
         static volatile bool cleanRebuildMenu;
-        static double vpLeft, vpTop, vpScaleX = 1, vpScaleY = 1, vpWidthPx, vpHeightPx;   // vue 3D en pixels ecran
+        static double vpLeft, vpTop, vpWidthPx, vpHeightPx;   // vue 3D en pixels ecran
         static volatile bool vpKnown;
-        static bool swallowUp;
 
         // UI
         static object cleanButton, cleanPopup, cleanCard, cleanRadiusBox, cleanFamiliesButton, cleanFamiliesPanel, cleanStatusBlock, cleanNewName, cleanViewport, toolBox;
@@ -255,7 +254,6 @@ namespace NcweFr
                 vpLeft = o.X + Convert.ToDouble(GetProp(pt, "X")) * scale;
                 vpTop = o.Y + Convert.ToDouble(GetProp(pt, "Y")) * scale;
                 vpWidthPx = aw * scale; vpHeightPx = ah * scale;
-                vpScaleX = vpScaleY = 1;
                 vpKnown = aw > 0;
             }
             catch (Exception e) { LogOnce("outil nettoyage vue: " + e.GetBaseException().Message); }
@@ -264,7 +262,7 @@ namespace NcweFr
         static void OnCleanRadius(object sender, object e)
         {
             object v = GetProp(cleanRadiusBox, "SelectedIndex");
-            if (v is int && (int)v >= 0) { cleanRadiusIndex = (int)v; SaveCleanSettings(); lastPreviewKey = ""; RefreshCleanPreview(); }
+            if (v is int && (int)v >= 0) { cleanRadiusIndex = (int)v; SaveCleanSettings(); RefreshCleanPreview(); }
         }
 
         static void OnCleanClick(object sender, object e)
@@ -294,7 +292,7 @@ namespace NcweFr
                     {
                         string cat = cleanCats[int.Parse(t[1])];
                         if (IsChecked(sender)) cleanEnabled.Add(cat); else cleanEnabled.Remove(cat);
-                        SaveCleanSettings(); lastPreviewKey = ""; RefreshCleanPreview();
+                        SaveCleanSettings(); RefreshCleanPreview();
                         SetProp(cleanFamiliesButton, "Content", "Familles : " + cleanEnabled.Count + " / " + cleanCats.Count);
                         return;
                     }
@@ -334,7 +332,7 @@ namespace NcweFr
             foreach (string a in assets) sb.Append(name).Append("\toui\t").Append(a).Append('\n');
             File.AppendAllText(CustomFile, sb.ToString(), new UTF8Encoding(false));
             LoadCleanRules(); cleanEnabled.Add(name); SaveCleanSettings();
-            cleanRebuildMenu = true; lastPreviewKey = "";
+            cleanRebuildMenu = true;
             CleanSetStatus("Famille perso « " + name + " » créée : " + assets.Count + " modèle" + (assets.Count > 1 ? "s" : "") + ".");
         }
 
@@ -345,7 +343,7 @@ namespace NcweFr
             foreach (string l in File.ReadAllLines(CustomFile, Encoding.UTF8)) if (!l.StartsWith(cat + "\t")) keep.Add(l);
             File.WriteAllLines(CustomFile, keep.ToArray(), new UTF8Encoding(false));
             LoadCleanRules(); cleanEnabled.Remove(cat); SaveCleanSettings();
-            cleanRebuildMenu = true; lastPreviewKey = "";
+            cleanRebuildMenu = true;
         }
 
         // ---------------- choix du point : un clic au sol apres "Choisir le point" ----------------
@@ -397,7 +395,12 @@ namespace NcweFr
                             string key = SelectionKey();
                             double[] p = null;
                             if (key != cleanSelBefore && key != "[]") p = PointFromClick(inView, px, py);
-                            if (p != null) { cleanArmed = false; cleanPoint = p; CleanPreview(p); }
+                            if (p != null)
+                            {
+                                cleanArmed = false; cleanPoint = p;
+                                CleanSetStatus("Point choisi : recherche des objets…");    // l'apercu peut prendre quelques secondes
+                                CleanPreview(p);
+                            }
                         }
                         wasDown = down;
                     }
@@ -451,18 +454,16 @@ namespace NcweFr
         }
 
         static double CleanRadius() { return CleanRadii[Math.Max(0, Math.Min(CleanRadii.Length - 1, cleanRadiusIndex))]; }
-        static volatile string lastPreviewKey = "";
 
         static void ClearCleanMarks()
         {
-            lastPreviewKey = "";
             ThreadPool.QueueUserWorkItem(delegate { try { Call("{\"op\":\"api.annotate\",\"client\":" + Q(CleanClient) + ",\"clear\":true,\"items\":[]}", 5000); } catch { } });
         }
 
         static void RefreshCleanPreview()
         {
             double[] p = cleanPoint;
-            if (p != null && cleanActive) ThreadPool.QueueUserWorkItem(delegate { CleanPreview(p); });
+            if (p != null && cleanActive) { CleanSetStatus("Recherche des objets…"); ThreadPool.QueueUserWorkItem(delegate { CleanPreview(p); }); }
         }
         // Objets a enlever autour d'un point (familles cochees).
         // cols (facultatif) recoit les collisions du jeu posees sur ces ordures (ou sur des ordures deja enlevees)
@@ -605,7 +606,6 @@ namespace NcweFr
                 sb.Append("]}");
             }
             Call("{\"op\":\"api.annotate\",\"client\":" + Q(CleanClient) + ",\"clear\":true,\"duration\":0,\"items\":[" + sb + "]}", 5000);
-            lastPreviewKey = "boxes";
             string colTxt = cols.Count > 0 ? " + " + cols.Count + " collision" + (cols.Count > 1 ? "s" : "") + " invisible" + (cols.Count > 1 ? "s" : "") + " (en orange)" : "";
             CleanSetStatus(ids.Count + cols.Count == 0 ? "Point choisi : rien à nettoyer dans " + radius + " m."
                 : ids.Count + " objet" + (ids.Count > 1 ? "s" : "") + " à enlever" + (ids.Count > 0 ? " (" + CleanDetail(perCat) + ")" : "") + colTxt + ". Cliquez « Nettoyer ».");

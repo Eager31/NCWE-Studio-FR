@@ -27,15 +27,14 @@ Completer la traduction
   2. Naviguez dans l'app : les textes restes en anglais s'ajoutent a non-traduits.txt.
   3. Ajoutez-les a fr.txt (anglais => francais) et relancez NCWE.
 
-Panneau Selection (dans la vue 3D)
-  Apparait des que 2 objets ou plus sont selectionnes. Liste les props regroupes par mesh (xN).
+Panneau Sélection (Inspecteur, sous « Dupliquer en série »)
+  Apparaît dès qu'un objet est sélectionné. Liste les props regroupés par mesh (xN).
   Par groupe :
     Isoler             ne garder selectionnes que ces objets
     Retirer            les enlever de la selection
     + Similaires       ajouter tous les objets du meme mesh dans le rayon (champ "Rayon (m)")
     Suppr.             supprimer ces objets          (2 clics pour confirmer, Ctrl+Z annule)
     Suppr. similaires  supprimer tous ceux du meme mesh dans le rayon (2 clics, Ctrl+Z annule)
-  Bouton ⇄ : changer de coin. Bouton ▾ : replier la liste.
   Seuls les objets charges autour de la camera sont trouves ; ceux en lecture seule sont ignores.
 
   Coches + "Supprimer les cochés" : plusieurs props supprimés ensemble (un seul Ctrl+Z).

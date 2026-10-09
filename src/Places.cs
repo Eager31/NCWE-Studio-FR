@@ -23,7 +23,7 @@ namespace NcweFr
         static List<string> placesCats = new List<string>();
         static object placesScroll;
         static object placesSection, placesCat, placesFilter, placesList, placesNewName, placesStatus;
-        static Delegate placesClick, placesChanged;
+        static Delegate placesClick;
         static string placesCurrentCat;
         static readonly List<Place> placesShown = new List<Place>();
 
@@ -147,13 +147,14 @@ namespace NcweFr
         {
             object item = GetProp(placesCat, "SelectedItem");
             placesCurrentCat = item == null ? (placesCats.Count > 0 ? placesCats[0] : null) : GetProp(item, "Content") as string;
-            string filter = ((GetProp(placesFilter, "Text") as string) ?? "").Trim().ToLowerInvariant();
+            string filter = ((GetProp(placesFilter, "Text") as string) ?? "").Replace(' ', ' ').Trim().ToLowerInvariant();
             List<Place> src = placesCurrentCat == MyPoints ? myPlaces : gamePlaces;
             placesShown.Clear();
             foreach (Place p in src)
             {
                 if (placesCurrentCat != null && p.Cat != placesCurrentCat && placesCurrentCat != MyPoints) continue;
-                if (filter.Length > 0 && p.Name.ToLowerInvariant().IndexOf(filter, StringComparison.Ordinal) < 0) continue;
+                // les noms officiels du jeu contiennent des espaces insecables : on les compare comme des espaces
+                if (filter.Length > 0 && p.Name.Replace(' ', ' ').ToLowerInvariant().IndexOf(filter, StringComparison.Ordinal) < 0) continue;
                 placesShown.Add(p);
                 if (placesShown.Count >= 250) break;
             }

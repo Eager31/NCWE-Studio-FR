@@ -547,32 +547,6 @@ namespace NcweFr
             return null;
         }
 
-        // Essai : entites de fast travel dans un echantillon de secteurs (format + duree).
-        static void ProbeFastTravel(object index)
-        {
-            Type it = index.GetType();
-            var sectors = (Array)it.GetProperty("Sectors").GetValue(index, null);
-            MethodInfo inspect = it.GetMethod("InspectEntities");
-            var sb = new StringBuilder("secteurs: " + sectors.Length + "\n");
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            int n = 0, hits = 0;
-            foreach (object s in sectors)
-            {
-                if (++n > 400) break;
-                object hash = GetAny(s, "Hash") ?? GetAny(s, "Key");
-                if (n == 1) { sb.AppendLine("ressource: " + s.GetType().FullName + " = " + s); foreach (PropertyInfo p in s.GetType().GetProperties()) sb.AppendLine("  ." + p.Name + " = " + Str(p.GetValue(s, null))); }
-                try
-                {
-                    foreach (object line in (IEnumerable)inspect.Invoke(index, new object[] { Convert.ToUInt64(Str(hash)), "fast_travel" }))
-                    { hits++; if (hits < 40) sb.AppendLine(Str(GetAny(s, "Path")) + " | " + line); }
-                }
-                catch (Exception e) { if (n < 3) sb.AppendLine("err " + e.GetBaseException().Message); }
-            }
-            sb.AppendLine("400 secteurs en " + sw.ElapsedMilliseconds + " ms, " + hits + " lignes");
-            File.WriteAllText(Path.Combine(dir, "extract-ft.txt"), sb.ToString());
-            Log("extract: sonde fast travel ecrite");
-        }
-
         static string TrimRoot(string p) { int i = p.IndexOf('/'); return i < 0 ? p : p.Substring(i + 1); }
         static string F(double v) { return v.ToString("0.###", CultureInfo.InvariantCulture); }
 
