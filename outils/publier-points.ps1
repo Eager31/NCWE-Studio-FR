@@ -12,6 +12,7 @@ $lignes += Get-Content $source -Encoding UTF8 | Where-Object { $_ -and $_[0] -ne
 Write-Output ("{0} points copiés dans points-projet.tsv" -f ($lignes.Count - 1))
 if (Test-Path (Join-Path $racine '.git')) {
     git -C $racine add points-projet.tsv
+    git -C $racine diff --cached --quiet; if ($LASTEXITCODE -eq 0) { Write-Output "Aucun changement de points."; return }
     git -C $racine commit -q -m "Points du projet mis a jour ($($lignes.Count - 1) points)"
-    Write-Output "Commit fait. Envoyez avec : git -C `"$racine`" push"
+    Write-Output "Commit fait."
 }
