@@ -30,6 +30,11 @@ Le plugin ne modifie aucun fichier de NCWE ni du jeu.
 
 Une nouvelle version de NCWE ? Décompressez-la à côté. Le raccourci prend toujours la plus récente.
 
+## Points du projet (via GitHub)
+
+Les points communs du projet sont dans `points-projet.tsv` : ils arrivent chez tout le monde avec les mises à jour, dans la catégorie « Points du projet » de Monde > Lieux.
+Pour publier vos Mes points dedans : `powershell -ExecutionPolicy Bypass -File outils\publier-points.ps1` puis `git push`.
+
 ## Points d'équipe
 
 1. Créer un dossier partagé et synchronisé : Google Drive pour ordinateur, OneDrive, Dropbox ou dossier réseau.

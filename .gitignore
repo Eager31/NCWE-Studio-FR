@@ -10,6 +10,7 @@ rayon-x.txt
 version.txt
 pas-de-maj.txt
 points-*.tsv
+!points-projet.tsv
 ncwe-fr.log
 non-traduits.txt
 outils/liste-objets-supprimes.csv
