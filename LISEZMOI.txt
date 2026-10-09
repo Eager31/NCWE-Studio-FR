@@ -76,6 +76,10 @@ Outil Nettoyage (bouton 🧹 dans la barre d'outils, sous Ascenseurs)
   saletés au sol. Décochées : dégâts (impacts, sang…), barricades et barbelés, poubelles et bennes,
   graffitis, végétation sèche. Le décor de scène (logos, drapeaux, panneaux, béton…) n'est jamais visé.
   Règles modifiables : nettoyage.tsv (catégorie, oui/non, morceau du chemin du modèle).
+Nettoyage : collisions invisibles
+  Avec les objets, « Nettoyer » enlève aussi leurs collisions du jeu : celles liées aux objets enlevés,
+  et celles restées posées sur des ordures déjà enlevées (murs invisibles qui bloquaient le joueur).
+  Elles sont comptées et encadrées en orange dans l'aperçu. Rien d'autre n'est touché ; Ctrl+Z annule tout.
   outils\liste-objets-supprimes.csv : les 246 modèles que vous avez supprimés à la main, avec leur catégorie.
 
 Rayon X (bouton 🩻 juste sous l'outil Sélection, cochable / décochable)

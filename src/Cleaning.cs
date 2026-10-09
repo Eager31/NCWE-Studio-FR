@@ -395,11 +395,9 @@ namespace NcweFr
                         {
                             Thread.Sleep(250);   // NCWE met a jour sa selection
                             string key = SelectionKey();
-                            if (key != cleanSelBefore && key != "[]")
-                            {
-                                double[] p = PointFromClick(inView, px, py);
-                                if (p != null) { cleanArmed = false; cleanPoint = p; CleanPreview(p); }
-                            }
+                            double[] p = null;
+                            if (key != cleanSelBefore && key != "[]") p = PointFromClick(inView, px, py);
+                            if (p != null) { cleanArmed = false; cleanPoint = p; CleanPreview(p); }
                         }
                         wasDown = down;
                     }
@@ -467,32 +465,116 @@ namespace NcweFr
             if (p != null && cleanActive) ThreadPool.QueueUserWorkItem(delegate { CleanPreview(p); });
         }
         // Objets a enlever autour d'un point (familles cochees).
-        static List<string> CleanTargets(double[] c, double radius, Dictionary<string, int> perCat)
+        // cols (facultatif) recoit les collisions du jeu posees sur ces ordures (ou sur des ordures deja enlevees)
+        // qui ne sont liees a aucun objet encore present : sinon elles restent en murs invisibles qui bloquent le joueur.
+        static List<string> CleanTargets(double[] c, double radius, Dictionary<string, int> perCat, List<string> cols = null)
         {
             var ids = new List<string>();
             var cats = new HashSet<string>(cleanEnabled);
             List<CleanRule> rules; lock (cleanRules) rules = new List<CleanRule>(cleanRules);
+            var trashBoxes = new List<double[]>();                 // boites des ordures (a enlever ou deja enlevees)
+            var others = new List<KeyValuePair<string, double[]>>(); // objets presents qui restent (id, boite)
             foreach (string kind in new[] { "mesh", "instanced_mesh", "decal" })
             {
                 var r = Call("{\"op\":\"api.query\",\"client\":" + Q(CleanClient) + ",\"center\":" + P(c[0], c[1], c[2]) + ",\"radius\":" + V(radius)
-                    + ",\"kinds\":[" + Q(kind) + "],\"limit\":2000,\"show\":false}", 30000);
+                    + ",\"kinds\":[" + Q(kind) + "],\"limit\":2000,\"show\":false" + (cols != null && kind != "decal" ? ",\"include_deleted\":true" : "") + "}", 30000);
                 object objs; if (!Ok(r) || !r.TryGetValue("objects", out objs) || !(objs is List<object>)) continue;
                 foreach (object o in (List<object>)objs)
                 {
                     var d = o as Dictionary<string, object>; if (d == null) continue;
-                    object ed; if (d.TryGetValue("editable", out ed) && ed is bool && !(bool)ed) continue;
-                    object del; if (d.TryGetValue("deleted", out del) && del is bool && (bool)del) continue;
-                    string asset = (Str(d, "asset") ?? "").ToLowerInvariant(); if (asset.Length == 0) continue;
-                    foreach (CleanRule rule in rules)
-                    {
-                        if (!cats.Contains(rule.Cat) || asset.IndexOf(rule.Pattern, StringComparison.Ordinal) < 0) continue;
-                        ids.Add(Str(d, "id"));
-                        if (perCat != null) { int k; perCat.TryGetValue(rule.Cat, out k); perCat[rule.Cat] = k + 1; }
-                        break;
-                    }
+                    object del; bool deleted = d.TryGetValue("deleted", out del) && del is bool && (bool)del;
+                    object ed; bool editable = !(d.TryGetValue("editable", out ed) && ed is bool && !(bool)ed);
+                    string asset = (Str(d, "asset") ?? "").ToLowerInvariant();
+                    bool trash = false;
+                    if (asset.Length > 0)
+                        foreach (CleanRule rule in rules)
+                        {
+                            if (!cats.Contains(rule.Cat) || asset.IndexOf(rule.Pattern, StringComparison.Ordinal) < 0) continue;
+                            trash = true;
+                            if (editable && !deleted)
+                            {
+                                ids.Add(Str(d, "id"));
+                                if (perCat != null) { int k; perCat.TryGetValue(rule.Cat, out k); perCat[rule.Cat] = k + 1; }
+                            }
+                            break;
+                        }
+                    if (cols == null || kind == "decal") continue;
+                    double[] box = Box(d);
+                    if (box == null) continue;
+                    if (trash) trashBoxes.Add(box);
+                    else if (!deleted) others.Add(new KeyValuePair<string, double[]>(Str(d, "id"), box));
                 }
             }
+            if (cols != null && trashBoxes.Count > 0) OrphanCollisions(c, radius, trashBoxes, others, cols);
+            if (cols != null && ids.Count > 0) LinkedCollisions(ids, cols);
             return ids;
+        }
+
+        static double[] Box(Dictionary<string, object> d)
+        {
+            object b; if (!d.TryGetValue("bounds", out b) || !(b is Dictionary<string, object>)) return null;
+            double[] mn = Vec((Dictionary<string, object>)b, "min"), mx = Vec((Dictionary<string, object>)b, "max");
+            if (mn == null || mx == null) return null;
+            return new[] { mn[0], mn[1], mn[2], mx[0], mx[1], mx[2] };
+        }
+
+        static bool InBox(double[] p, double[] b, double m, double mz)
+        {
+            return p[0] >= b[0] - m && p[0] <= b[3] + m && p[1] >= b[1] - m && p[1] <= b[4] + m && p[2] >= b[2] - mz && p[2] <= b[5] + mz;
+        }
+
+        // Collisions liees (selon NCWE) aux objets a enlever.
+        static void LinkedCollisions(List<string> ids, List<string> cols)
+        {
+            var have = new HashSet<string>(cols, StringComparer.Ordinal);
+            for (int i = 0; i < ids.Count; i += 300)
+            {
+                var sb = new StringBuilder("{\"op\":\"api.object\",\"client\":" + Q(CleanClient) + ",\"ids\":[");
+                for (int k = i; k < Math.Min(ids.Count, i + 300); k++) { if (k > i) sb.Append(','); sb.Append(Q(ids[k])); }
+                var ro = Call(sb.Append("]}").ToString(), 30000);
+                object list; if (!Ok(ro) || !ro.TryGetValue("objects", out list) || !(list is List<object>)) return;
+                foreach (object o in (List<object>)list)
+                {
+                    var d = o as Dictionary<string, object>; object lk; if (d == null || !d.TryGetValue("linked", out lk) || !(lk is Dictionary<string, object>)) continue;
+                    object lc; if (((Dictionary<string, object>)lk).TryGetValue("collision", out lc) && lc is List<object>)
+                        foreach (object id in (List<object>)lc) { string s = id as string; if (s != null && have.Add(s)) cols.Add(s); }
+                }
+            }
+        }
+
+        // Collisions du jeu posees sur une ordure et liees a aucun objet qui reste.
+        static void OrphanCollisions(double[] c, double radius, List<double[]> trashBoxes, List<KeyValuePair<string, double[]>> others, List<string> cols)
+        {
+            var r = Call("{\"op\":\"api.query\",\"client\":" + Q(CleanClient) + ",\"center\":" + P(c[0], c[1], c[2]) + ",\"radius\":" + V(radius + 2)
+                + ",\"kinds\":[\"collision\"],\"limit\":2000,\"show\":false}", 30000);
+            object objs; if (!Ok(r) || !r.TryGetValue("objects", out objs) || !(objs is List<object>)) return;
+            var cand = new List<KeyValuePair<string, double[]>>();
+            foreach (object o in (List<object>)objs)
+            {
+                var d = o as Dictionary<string, object>; if (d == null) continue;
+                object ed; if (d.TryGetValue("editable", out ed) && ed is bool && !(bool)ed) continue;
+                double[] p = Vec(d, "position"); if (p == null) continue;
+                foreach (double[] b in trashBoxes) if (InBox(p, b, 0.1, 0.2)) { cand.Add(new KeyValuePair<string, double[]>(Str(d, "id"), p)); break; }
+            }
+            if (cand.Count == 0) return;
+            // objets qui restent pres des candidates : leurs collisions liees sont gardees
+            var near = new List<string>();
+            foreach (var ob in others)
+                foreach (var cd in cand) if (InBox(cd.Value, ob.Value, 1.0, 1.0)) { near.Add(ob.Key); break; }
+            var keep = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < near.Count; i += 300)
+            {
+                var sb = new StringBuilder("{\"op\":\"api.object\",\"client\":" + Q(CleanClient) + ",\"ids\":[");
+                for (int k = i; k < Math.Min(near.Count, i + 300); k++) { if (k > i) sb.Append(','); sb.Append(Q(near[k])); }
+                var ro = Call(sb.Append("]}").ToString(), 30000);
+                object list; if (!Ok(ro) || !ro.TryGetValue("objects", out list) || !(list is List<object>)) { cand.Clear(); return; }   // prudence : rien si on ne sait pas
+                foreach (object o in (List<object>)list)
+                {
+                    var d = o as Dictionary<string, object>; object lk; if (d == null || !d.TryGetValue("linked", out lk) || !(lk is Dictionary<string, object>)) continue;
+                    object lc; if (((Dictionary<string, object>)lk).TryGetValue("collision", out lc) && lc is List<object>) foreach (object id in (List<object>)lc) if (id is string) keep.Add((string)id);
+                }
+            }
+            foreach (var cd in cand) if (!keep.Contains(cd.Key)) cols.Add(cd.Key);
         }
 
         static string CleanDetail(Dictionary<string, int> perCat)
@@ -507,17 +589,26 @@ namespace NcweFr
         {
             double radius = CleanRadius();
             var perCat = new Dictionary<string, int>();
-            List<string> ids = CleanTargets(c, radius, perCat);
-            var sb = new StringBuilder(RingItem(c, radius, ids.Count > 0 ? "red" : "amber"));
+            var cols = new List<string>();
+            List<string> ids = CleanTargets(c, radius, perCat, cols);
+            var sb = new StringBuilder(RingItem(c, radius, ids.Count + cols.Count > 0 ? "red" : "amber"));
             if (ids.Count > 0)
             {
                 sb.Append(",{\"type\":\"objects\",\"color\":\"red\",\"ids\":[");
                 for (int i = 0; i < ids.Count && i < 2000; i++) { if (i > 0) sb.Append(','); sb.Append(Q(ids[i])); }
                 sb.Append("]}");
             }
+            if (cols.Count > 0)
+            {
+                sb.Append(",{\"type\":\"objects\",\"color\":\"orange\",\"ids\":[");
+                for (int i = 0; i < cols.Count && i < 2000; i++) { if (i > 0) sb.Append(','); sb.Append(Q(cols[i])); }
+                sb.Append("]}");
+            }
             Call("{\"op\":\"api.annotate\",\"client\":" + Q(CleanClient) + ",\"clear\":true,\"duration\":0,\"items\":[" + sb + "]}", 5000);
             lastPreviewKey = "boxes";
-            CleanSetStatus(ids.Count == 0 ? "Point choisi : rien à nettoyer dans " + radius + " m." : ids.Count + " objet" + (ids.Count > 1 ? "s" : "") + " à enlever (" + CleanDetail(perCat) + "). Cliquez « Nettoyer ».");
+            string colTxt = cols.Count > 0 ? " + " + cols.Count + " collision" + (cols.Count > 1 ? "s" : "") + " invisible" + (cols.Count > 1 ? "s" : "") + " (en orange)" : "";
+            CleanSetStatus(ids.Count + cols.Count == 0 ? "Point choisi : rien à nettoyer dans " + radius + " m."
+                : ids.Count + " objet" + (ids.Count > 1 ? "s" : "") + " à enlever" + (ids.Count > 0 ? " (" + CleanDetail(perCat) + ")" : "") + colTxt + ". Cliquez « Nettoyer ».");
         }
 
         // Bouton Nettoyer : une seule suppression (un Ctrl+Z annule tout).
@@ -528,14 +619,17 @@ namespace NcweFr
             {
                 double radius = CleanRadius();
                 var perCat = new Dictionary<string, int>();
-                List<string> ids = CleanTargets(c, radius, perCat);
-                if (ids.Count == 0) { CleanSetStatus("Rien à nettoyer ici (" + radius + " m)."); return; }
+                var cols = new List<string>();
+                List<string> ids = CleanTargets(c, radius, perCat, cols);
+                if (ids.Count + cols.Count == 0) { CleanSetStatus("Rien à nettoyer ici (" + radius + " m)."); return; }
+                var all = new List<string>(ids); all.AddRange(cols);
                 var sb = new StringBuilder("{\"op\":\"api.delete\",\"client\":" + Q(CleanClient) + ",\"ids\":[");
-                for (int i = 0; i < ids.Count; i++) { if (i > 0) sb.Append(','); sb.Append(Q(ids[i])); }
+                for (int i = 0; i < all.Count; i++) { if (i > 0) sb.Append(','); sb.Append(Q(all[i])); }
                 sb.Append("]}");
                 var r = Call(sb.ToString(), 120000);
                 Call("{\"op\":\"api.annotate\",\"client\":" + Q(CleanClient) + ",\"clear\":true,\"duration\":0,\"items\":[" + RingItem(c, radius, "amber") + "]}", 5000);
-                if (Ok(r)) { object d; r.TryGetValue("deleted", out d); CleanSetStatus(Convert.ToInt32(d ?? ids.Count) + " objets enlevés (" + CleanDetail(perCat) + "). Ctrl+Z annule."); }
+                if (Ok(r)) CleanSetStatus(ids.Count + " objets enlevés" + (ids.Count > 0 ? " (" + CleanDetail(perCat) + ")" : "")
+                    + (cols.Count > 0 ? " + " + cols.Count + " collisions invisibles" : "") + ". Ctrl+Z annule.");
                 else CleanSetStatus("Nettoyage refusé : " + Err(r));
             }
             finally { cleanBusy = false; CleanSetStatus(cleanStatusText); }
