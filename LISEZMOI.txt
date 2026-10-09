@@ -75,11 +75,12 @@ Outil Nettoyage (bouton 🧹 dans la barre d'outils, sous Ascenseurs)
   saletés au sol. Décochées : dégâts (impacts, sang…), barricades et barbelés, poubelles et bennes,
   graffitis, végétation sèche. Le décor de scène (logos, drapeaux, panneaux, béton…) n'est jamais visé.
   Règles modifiables : nettoyage.tsv (catégorie, oui/non, morceau du chemin du modèle).
-Nettoyage : collisions invisibles
-  Avec les objets, « Nettoyer » enlève aussi leurs collisions du jeu : celles liées aux objets enlevés,
-  et celles restées posées sur des ordures déjà enlevées (murs invisibles qui bloquaient le joueur).
-  Elles sont comptées et encadrées en orange dans l'aperçu. Rien d'autre n'est touché ; Ctrl+Z annule tout.
-  outils\liste-objets-supprimes.csv : les 246 modèles que vous avez supprimés à la main, avec leur catégorie.
+Ce qui part avec un objet supprimé (Nettoyage 🧹 et boutons Supprimer du panneau Sélection)
+  Ses collisions du jeu : celles que NCWE lui associe, et celles posées exactement sur lui sans lien
+  avec un autre objet (sinon : murs invisibles qui bloquent le joueur).
+  Ses sons : émetteurs posés sur lui, sauf s'ils sont aussi sur un autre objet qui reste.
+  Le Nettoyage enlève aussi ce qui reste sur des ordures déjà supprimées. Aperçu en orange ; un Ctrl+Z annule tout.
+  (La touche Suppr de NCWE, elle, n'enlève que la collision placée exactement sur l'objet.)  outils\liste-objets-supprimes.csv : les 246 modèles que vous avez supprimés à la main, avec leur catégorie.
 
 Rayon X (bouton 🩻 juste sous l'outil Sélection, cochable / décochable)
   Coché : la sélection rectangle (Maj + glisser dans la vue 3D) prend tout ce qui est dans le rectangle,
@@ -88,4 +89,4 @@ Rayon X (bouton 🩻 juste sous l'outil Sélection, cochable / décochable)
   Même portée que NCWE : objets affichés, à moins de 300 m, modifiables. État mémorisé dans rayon-x.txt.
 
 Recompiler (si src\*.cs change, NCWE ferme)
-  C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:library /optimize+ /r:System.Core.dll /out:NCWE.FR.dll src\NcweFr.cs src\SelectionPanel.cs src\Tools.cs src\Extract.cs src\Places.cs src\Cleaning.cs src\XRay.cs src\Team.cs
+  C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:library /optimize+ /r:System.Core.dll /out:NCWE.FR.dll src\NcweFr.cs src\SelectionPanel.cs src\Tools.cs src\Extract.cs src\Places.cs src\Cleaning.cs src\XRay.cs src\Team.cs src\Associes.cs

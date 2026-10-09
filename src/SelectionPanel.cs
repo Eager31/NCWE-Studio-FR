@@ -559,14 +559,13 @@ namespace NcweFr
         {
             if (ids.Count == 0) { SetStatus("Rien de supprimable (objets en lecture seule)."); return; }
             SetStatus("Suppression de " + ids.Count + " objets « " + label + " »…");
-            var sb = new StringBuilder("{\"op\":\"api.delete\",\"client\":" + Q(Client) + ",\"ids\":[");
-            for (int i = 0; i < ids.Count; i++) { if (i > 0) sb.Append(','); sb.Append(Q(ids[i])); }
-            sb.Append("]}");
-            var r = Call(sb.ToString(), 120000);
+            // avec leurs collisions et leurs sons associes (sinon murs invisibles / sons fantomes)
+            var cols = new List<string>(); var sounds = new List<string>();
+            FindAssociated(Client, ids, null, cols, sounds);
+            var r = DeleteWithAssociated(Client, ids, cols, sounds);
             if (Ok(r))
             {
-                object d; r.TryGetValue("deleted", out d);
-                SetStatus(Convert.ToInt32(d ?? ids.Count) + " objets « " + label + " » supprimés (Ctrl+Z pour annuler)."
+                SetStatus(ids.Count + " objets « " + label + " » supprimés" + AssociatedText(cols, sounds) + " (Ctrl+Z pour annuler)."
                     + (readOnly > 0 ? " " + readOnly + " en lecture seule ignorés." : ""));
             }
             else SetStatus("Suppression refusée : " + Err(r));
