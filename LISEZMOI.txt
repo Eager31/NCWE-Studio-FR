@@ -80,7 +80,8 @@ Ce qui part avec un objet supprimé (Nettoyage 🧹 et boutons Supprimer du pann
   avec un autre objet (sinon : murs invisibles qui bloquent le joueur).
   Ses sons : émetteurs posés sur lui, sauf s'ils sont aussi sur un autre objet qui reste.
   Le Nettoyage enlève aussi ce qui reste sur des ordures déjà supprimées. Aperçu en orange ; un Ctrl+Z annule tout.
-  (La touche Suppr de NCWE, elle, n'enlève que la collision placée exactement sur l'objet.)  outils\liste-objets-supprimes.csv : les 246 modèles que vous avez supprimés à la main, avec leur catégorie.
+  (La touche Suppr de NCWE, elle, n'enlève que la collision placée exactement sur l'objet.)
+  outils\liste-objets-supprimes.csv : les 246 modèles que vous avez supprimés à la main, avec leur catégorie.
 
 Rayon X (bouton 🩻 juste sous l'outil Sélection, cochable / décochable)
   Coché : la sélection rectangle (Maj + glisser dans la vue 3D) prend tout ce qui est dans le rectangle,
