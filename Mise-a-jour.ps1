@@ -2,7 +2,7 @@
 # Compare la dernière version du dépôt à version.txt ; si elle a changé, télécharge et remplace les fichiers.
 # Vos fichiers personnels ne sont jamais touchés. Hors ligne ou en cas d'erreur : rien ne change, NCWE se lance.
 # Désactiver : créer un fichier pas-de-maj.txt dans ce dossier. (Ignorée aussi dans un dossier git de développement.)
-param([string]$Depot = 'BT-CORE/NCWE-Studio-FR', [string]$Branche = 'main')
+param([string]$Depot = 'Eager31/NCWE-Studio-FR', [string]$Branche = 'main')
 $ErrorActionPreference = 'Stop'
 $ici = $PSScriptRoot
 if ((Test-Path (Join-Path $ici '.git')) -or (Test-Path (Join-Path $ici 'pas-de-maj.txt'))) { return }
