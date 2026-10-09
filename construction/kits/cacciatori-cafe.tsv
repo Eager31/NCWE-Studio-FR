@@ -1,0 +1,52 @@
+﻿# Kit « cacciatori-cafe » : centre -1212.3;-549.4;12, rayon 14 m, source all, 2026-10-09
+# famille	modèle	nombre	apparences (les plus utilisées d'abord)	taille x;y;z	échelles vues	exemple de position
+Architecture	base\environment\architecture\city_center\corporate_plaza\cct_cpz_building_a_f_6m.mesh	3	default x3	6;0.24;8		-1216.3;-557.3;12.6
+Architecture	base\environment\architecture\city_center\corporate_plaza\cct_cpz_building_a_f_3m.mesh	3	default x3	3;0.24;8		-1204.3;-557.5;8.1
+Architecture	base\environment\architecture\city_center\corporate_plaza\cct_cpz_building_a_f_3m_h4m_corner.mesh	1	default	3.24;3.24;4		-1225;-554.3;12.1
+Architecture	base\environment\architecture\city_center\corporate_plaza\cct_cpz_building_a_f_3m_h4m.mesh	1	default	3;0.24;4		-1224.8;-553.9;12
+Assises	base\environment\decoration\furniture\restaurant\bar_lounge_chair\bar_lounge_chair_a.mesh	16	default_no_emissive x16	0.66;0.78;0.74		-1212;-549.8;10.1
+Assises	base\environment\decoration\furniture\restaurant\bar_sofa_01\bar_sofa_01_k_tall.mesh	16	black_no_emissive x16	1;0.9;1.52		-1212.3;-542.2;10.1
+Assises	base\environment\decoration\furniture\restaurant\bar_stool\bar_stool_a.mesh	5	default x5	0.41;0.35;0.8		-1205.3;-549.2;10.1
+Décalques	base\surfaces\textures\decals\graffiti\valentinos\valentinos_dec_v14.mi	1	default		7.73;3.94;2.34	-1225.2;-553.5;9.8
+Enseignes et pubs	base\environment\decoration\advertising\signage\konpeki_plaza_facade_logo\konpeki_letters_i.mesh	7	neon_yellow x7	0.06;0.04;0.25	1.67;5.79;2.54 | 0.96;5.29;0.3	-1201.2;-549.7;14.4
+Enseignes et pubs	base\environment\decoration\advertising\signage\konpeki_plaza_facade_logo\konpeki_letters_c.mesh	7	neon_yellow x7	0.2;0.04;0.24	1.67;5.79;2.54 | 0.96;5.29;1.46	-1201.2;-548.8;14
+Enseignes et pubs	base\environment\decoration\advertising\signage\konpeki_plaza_facade_logo\konpeki_letters_a.mesh	7	neon_yellow x7	0.21;0.04;0.25	1.67;5.79;2.54 | 0.96;5.29;1.46	-1201.2;-549.1;14
+Enseignes et pubs	base\environment\decoration\advertising\signage\city_deco_font\city_deco_font_orbitron_mesh_underscore.mesh	4	orange x4	0.23;0.04;0.09	34.59;5.79;0.24 | 30.07;5.79;0.24	-1201.2;-549.2;13.6
+Enseignes et pubs	base\environment\decoration\advertising\signage\konpeki_plaza_facade_logo\konpeki_letters_t.mesh	4	neon_yellow x4	0.17;0.04;0.24	0.96;5.29;1.46 | 1.67;5.79;2.54	-1201.2;-550.4;14.5
+Enseignes et pubs	base\environment\decoration\advertising\signage\konpeki_plaza_facade_logo\konpeki_letters_r.mesh	4	neon_yellow x4	0.16;0.04;0.24	0.96;5.29;1.46 | 1.67;5.79;2.54	-1201.2;-551.5;14.5
+Enseignes et pubs	base\environment\decoration\advertising\signage\konpeki_plaza_facade_logo\konpeki_letters_e.mesh	2	neon_yellow x2	0.16;0.04;0.24	0.96;5.29;1.46	-1201.2;-549.7;14
+Enseignes et pubs	base\environment\decoration\advertising\signage\konpeki_plaza_facade_logo\konpeki_letters_o.mesh	2	neon_yellow x2	0.21;0.04;0.24	1.67;5.79;2.54	-1201.2;-551;14.5
+Enseignes et pubs	base\environment\decoration\advertising\signage\locations_signages\signage_biotechnica_logo.mesh	2	default x2	2.44;0.16;2.43		-1201.4;-549.2;14.5
+Enseignes et pubs	base\environment\decoration\advertising\holograms\common\common_holograms_a.mesh	1	arrows	1;0;1	8.31;1;2.88	-1222.5;-545.6;8.2
+Enseignes et pubs	base\environment\decoration\advertising\signage\konpeki_plaza_facade_logo\konpeki_letters_u.mesh	1	neon_yellow	0.21;0.04;0.24	0.96;5.29;1.46	-1212.8;-562.1;16.3
+Enseignes et pubs	base\environment\decoration\advertising\signage\konpeki_plaza_facade_logo\konpeki_letters_s.mesh	1	neon_yellow	0.16;0.04;0.24	0.96;5.29;1.46	-1213.6;-562.1;16.3
+Enseignes et pubs	base\environment\decoration\advertising\signage\konpeki_plaza_facade_logo\konpeki_letters_f.mesh	1	neon_yellow	0.15;0.04;0.24	0.96;5.29;1.46	-1201.2;-549.4;14
+Enseignes et pubs	base\environment\decoration\advertising\signage\konpeki_plaza_facade_logo\konpeki_letters_n.mesh	1	neon_yellow	0.17;0.04;0.24	0.96;5.29;1.46	-1211.8;-562.1;16.3
+Murs	base\environment\architecture\common\int\int_common_a\int_common_a_wall_h400_l300_a.mesh	26	paint_black x26	3.01;0.23;3.8	1.05;1;1.58 | 1.07;1;1.58 | 0.06;1;1.58	-1213.7;-557.3;13.3
+Murs	base\environment\decoration\furniture\restaurant\tall_screens_decoration\wall_panel_decoration_a.mesh	9	default x9	0.5;0.35;2	1.5;1.5;1.5	-1223;-549.5;11.9
+Murs	base\environment\architecture\common\int\int_nkt_jp_apartment_a\int_nkt_jp_apartment_a_wall_h800_l300_b.mesh	6	wood_planks x2, default x2, gold x2	3;0.22;7.8		-1210.8;-558.1;10.1
+Murs	base\environment\architecture\common\int\int_nkt_jp_apartment_a\int_nkt_jp_apartment_a_wall_l200_a.mesh	4	marble_black x4	2;0.22;3.8	1;0.35;0.58	-1212;-545.6;10.1
+Murs	base\environment\architecture\city_center\corporate_plaza\cct_cpz_building_c_wall_transition_a.mesh	4	default x4	6;2.21;4	1.5;1;1	-1210.1;-557.4;16
+Murs	base\environment\architecture\westbrook\charter_hill\wbr_cha_building_b_wall_w300_h400_corner_convex_ac.mesh	3	default x3	3.5;3.5;4	1;1.06;1	-1201.6;-557.3;12.1
+Murs	base\environment\architecture\city_center\corporate_plaza\cct_cpz_building_c_wall_transition_corner_c90_a.mesh	1	default	3.21;3.21;4		-1204.1;-557.5;16
+Murs	base\environment\architecture\westbrook\charter_hill\wbr_cha_building_a_wall_window_w600_h400_ag.mesh	1	default	6;0.5;4	1;1;0.98	-1224.6;-544.9;12
+Murs	base\environment\architecture\westbrook\charter_hill\wbr_cha_building_b_wall_w600_h400_ac.mesh	1	default	6;0.5;4		-1204;-553.7;16.1
+Murs	base\environment\architecture\westbrook\charter_hill\wbr_cha_building_a_wall_window_w300_h400_ac.mesh	1	default	3;0.5;4	1.15;1;0.98	-1224.7;-550.9;12
+Plafond	base\environment\architecture\common\int\int_nkt_apartment_a\int_nkt_apartment_a_ceiling_light_l300_aa.mesh	58	gold x54, sts_13_green x4	3;0.98;0.07	0.25;0.12;1 | 0.33;0.12;1 | 6.13;0.12;1	-1212.4;-545.6;11.2
+Plafond	ep1\environment\architecture\c_pacifica\combat_zone\boulevard_av\combat_tower\int_combat_tower_ceiling_l400.mesh	23	default x23	4;4;0.06	0.92;1;1	-1212.3;-549.4;16.2
+Portes	base\environment\architecture\common\int\int_nkt_jp_apartment_a\int_nkt_jp_apartment_a_window_h800_l300_door_frame_bottom_b.mesh	2	wood_planks, default	3;0.7;8		-1213.8;-557.8;10.1
+Sol	base\environment\architecture\common\int\int_mlt_office_a\int_mlt_office_floor_b_l300_w200.mesh	64	marble_dark x64	3;2;0.1	0.92;1;1	-1212.3;-549.4;10.1
+Sol	base\environment\architecture\common\int\int_mlt_office_a\int_mlt_office_floor_a_l600.mesh	2	marble_light, marble_dark	6;6;0.1	0.74;1;1	-1215.4;-562.2;10.1
+Sol	base\environment\architecture\common\int\int_common_a\int_common_a_floor_l300_a.mesh	1	tiles_black_large	3;3;0.2		-1203.3;-558.2;8.2
+Tables et comptoirs	base\environment\decoration\furniture\restaurant\bar_table\bar_table_f.mesh	8	default x8	1.05;1.6;0.8		-1213;-549.8;10.1
+Tables et comptoirs	base\environment\decoration\furniture\restaurant\bar_table\bar_table_a.mesh	6	default x6	1.05;1.05;0.8		-1211.3;-543.6;10.1
+Tables et comptoirs	base\environment\decoration\furniture\restaurant\club_bar_cabinet\club_bar_cabinet_a_top_a.mesh	4	default x4	2;0.3;2.03		-1201.8;-549.2;11.1
+Tables et comptoirs	base\environment\decoration\furniture\restaurant\club_bar_cabinet\club_bar_cabinet_a_bottom_a.mesh	4	default x4	2;0.3;1		-1201.8;-549.2;10.1
+Tables et comptoirs	base\environment\decoration\furniture\restaurant\bar_counter_02\bar_counter_02_l200_a.mesh	3	default x3	0.8;2;3.22		-1203.4;-548.6;10.1
+Tables et comptoirs	base\environment\decoration\furniture\restaurant\bar_counter_02\bar_counter_02_c90_b.mesh	1	default	1.59;1.59;3.22		-1202.4;-553.6;10.1
+Végétation	base\environment\decoration\containers\planter\planter_large\planter_large_01_ground_b.mesh	3	soil x3	2;2;0.14		-1210;-547;10.1
+Végétation	base\environment\vegetation\trees\joshua\joshua_med.mesh	3	default x3	3.87;4.49;5.78	0.8;0.8;0.8	-1210;-547;10.2
+Végétation	base\environment\vegetation\trees\joshua\joshua_big.mesh	1	default	4.57;5.37;6.8	0.8;0.8;0.8	-1217;-560.7;10.1
+Lumière (élément)	point	rgb=0.18;0.91;0.42	12	intensité≈908 rayon≈5.7
+Lumière (élément)	point	k=2700	9	intensité≈1500 rayon≈8.8
+Lumière (élément)	point	k=4000	4	intensité≈750 rayon≈6

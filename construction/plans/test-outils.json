@@ -1,0 +1,26 @@
+{
+  "nom": "test-outils",
+  "kits": ["cacciatori-cafe"],
+  "origine": [-1212, -549, -30],
+  "cap": 30,
+  "vue": { "de": [0, -4.2, 2.6], "vers": [0, 3, 1.2], "fov": 85 },
+  "etapes": [
+    { "nom": "Salle",
+      "salle": { "centre": [0, 0, 0], "taille": [12, 10], "hauteur": 4,
+                 "sol": "int_mlt_office_floor_b_l300_w200", "mur": "int_common_a_wall_h400_l300_a", "plafond": "int_combat_tower_ceiling_l400",
+                 "portes": [ { "mur": "sud", "largeur": 2, "hauteur": 2.6 } ], "lumieres": 4, "k": 2700 } },
+    { "nom": "Mobilier",
+      "objets": [
+        { "motif": "ligne", "m": "bar_lounge_chair_a", "de": [-4, -2, 0], "a": [4, -2, 0], "nombre": 5, "app": "default_no_emissive" },
+        { "motif": "cercle", "m": "bar_stool_a", "centre": [0, 2, 0], "rayon": 1.5, "nombre": 6, "face": "centre" },
+        { "m": "bar_table_a", "p": [0, 2, 0] }
+      ],
+      "lumieres": [ { "p": [0, 2, 3], "rgb": "#2EE86A", "i": 800, "r": 6 } ] },
+    { "nom": "Motifs",
+      "objets": [
+        { "motif": "traits", "face": "-Y", "de": [-5, 4.85], "a": [5, 4.85], "z": 1.6 },
+        { "motif": "traits", "face": "+X", "de": [-5.85, -4], "a": [-5.85, 4], "z": 1.6, "forme": "/" },
+        { "motif": "cadre", "min": [-5.5, -4.5], "max": [5.5, 4.5], "z": 3.96, "double": 0.3 }
+      ] }
+  ]
+}

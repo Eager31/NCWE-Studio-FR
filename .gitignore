@@ -1,0 +1,21 @@
+# Fichiers personnels (jamais publiés, jamais écrasés par la mise à jour)
+mes-points.tsv
+equipe.txt
+chemin-ncwe.txt
+chemin-mcp.txt
+familles-perso.tsv
+nettoyage-reglages.txt
+panneau-selection.txt
+rayon-x.txt
+version.txt
+pas-de-maj.txt
+points-*.tsv
+ncwe-fr.log
+non-traduits.txt
+outils/liste-objets-supprimes.csv
+construction/plans/captures/
+scan-*.tsv
+
+# Fichiers temporaires
+*.new.dll
+*.tmp

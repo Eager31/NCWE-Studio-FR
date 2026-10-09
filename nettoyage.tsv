@@ -1,0 +1,31 @@
+# Pack de nettoyage automatique : categories d'objets a enlever.
+# Format : categorie <TAB> actif par defaut (oui/non) <TAB> morceau de chemin du modele (minuscules)
+# Un objet est retire si le chemin de son modele contient un des morceaux de sa categorie.
+# Par defaut : seulement les ordures. Decor de scene (logos, drapeaux, panneaux, beton, blocus, lumieres, barbeles) jamais touche.
+# Ne touche que les meshes et decalques modifiables (jamais les entites, portes, lumieres ni le contenu de quete).
+Déchets	oui	\decoration\garbage\trash\
+Déchets	oui	\decoration\garbage\scraps\
+Déchets	oui	\_decoration_set\trash\
+Déchets	oui	_trash.mesh
+Déchets	oui	\garbage_bag
+Nourriture et boissons	oui	\decoration\food\
+Nourriture et boissons	oui	\tableware\poor_
+Emballages et cartons	oui	\containers\packaging\
+Papiers et journaux	oui	\misc\paper\
+Divers (chiffons, mégots, bombes de peinture)	oui	\cleaning\cleaning_rag\
+Divers (chiffons, mégots, bombes de peinture)	oui	\recreation\smoking\
+Divers (chiffons, mégots, bombes de peinture)	oui	\painting\paint_spray\
+Divers (chiffons, mégots, bombes de peinture)	oui	\buckets\bucket\
+Saletés au sol (décalques)	oui	\decals\dirt\
+Saletés au sol (décalques)	oui	\decals\decal_trash\
+Dégâts (impacts, explosions, sang, vitres brisées)	non	\decals\bullet_holes\
+Dégâts (impacts, explosions, sang, vitres brisées)	non	glass_shatter
+Dégâts (impacts, explosions, sang, vitres brisées)	non	\decals\misc\explosion
+Dégâts (impacts, explosions, sang, vitres brisées)	non	blood
+Poubelles et bennes	non	\decoration\garbage\bins\
+Barricades et barbelés	non	\roadblock\
+Barricades et barbelés	non	\checkpoint\
+Barricades et barbelés	non	_barbs
+Végétation sèche	non	_dry.mesh
+Graffitis et tags	non	\decals\lettering\
+Graffitis et tags	non	\decals\graffiti

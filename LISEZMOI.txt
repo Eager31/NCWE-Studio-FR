@@ -1,0 +1,88 @@
+﻿NCWE Studio - interface en francais
+====================================
+
+Utilisation
+  Raccourci bureau "NCWE Studio (FR)" (cree par "Creer le raccourci bureau.cmd").
+  Il lance automatiquement la version la plus recente de NCWE trouvee a cote de ce dossier
+  (ex. E:\Nouveau dossier\NCWE-Studio-*\). Nouvelle version = la decompresser a cote, rien d'autre.
+  Forcer une version : ecrire le chemin de son NCWE.Studio.exe dans chemin-ncwe.txt.
+  Lancer NCWE.Studio.exe directement = interface anglaise d'origine.
+  Vos donnees restent ici : mes-points.tsv (Mes points), panneau-selection.txt.
+
+Ce que fait le plugin
+  - Traduit a l'ecran les menus, boutons, infobulles, panneaux, dialogues et messages.
+  - Ne modifie aucun fichier de NCWE ni du jeu. Supprimer ce dossier = desinstaller.
+  - Ne touche jamais aux props : noms de props/meshes/entites, chemins, cartes de la
+    bibliotheque, hierarchie (outliner), noms saisis et champs de texte restent tels quels.
+    Les projets, exports et mods produits sont identiques a la version anglaise.
+
+Fichiers
+  NCWE.FR.dll                    le plugin (charge par .NET via DOTNET_STARTUP_HOOKS)
+  fr.txt                         le dictionnaire, modifiable (format explique en tete)
+  src\NcweFr.cs                  code source
+  ncwe-fr.log                    journal du plugin
+
+Completer la traduction
+  1. Dans une invite de commandes :  set NCWE_FR_DUMP=1  puis lancez le .cmd depuis cette invite.
+  2. Naviguez dans l'app : les textes restes en anglais s'ajoutent a non-traduits.txt.
+  3. Ajoutez-les a fr.txt (anglais => francais) et relancez NCWE.
+
+Panneau Selection (dans la vue 3D)
+  Apparait des que 2 objets ou plus sont selectionnes. Liste les props regroupes par mesh (xN).
+  Par groupe :
+    Isoler             ne garder selectionnes que ces objets
+    Retirer            les enlever de la selection
+    + Similaires       ajouter tous les objets du meme mesh dans le rayon (champ "Rayon (m)")
+    Suppr.             supprimer ces objets          (2 clics pour confirmer, Ctrl+Z annule)
+    Suppr. similaires  supprimer tous ceux du meme mesh dans le rayon (2 clics, Ctrl+Z annule)
+  Bouton ⇄ : changer de coin. Bouton ▾ : replier la liste.
+  Seuls les objets charges autour de la camera sont trouves ; ceux en lecture seule sont ignores.
+
+  Coches + "Supprimer les cochés" : plusieurs props supprimés ensemble (un seul Ctrl+Z).
+  Cercles orange dans la vue 3D = rayon de recherche des similaires.
+  1er clic sur une suppression : objets visés encadrés en rouge + leur nombre ; 2e clic = confirmer.
+
+Raccourcis et gizmo (hors champs de saisie)
+  R            outil Pivoter
+  T            outil Déplacer
+  Maj          en tenant le gizmo de rotation : rotation libre (aimantation coupée le temps du geste)
+  G            aligner la sélection : sol = l'objet épouse la pente et se pose dessus,
+               mur à moins de 60 cm = dos de l'objet collé au mur, droit. Ctrl+Z annule.
+  Auto-aligner (case du panneau) : même chose automatiquement quand on lâche un objet déplacé.
+  Note : "l'avant" d'un prop dépend de son modèle ; contre un mur, tournez-le de 180° si besoin.
+
+Lieux de Cyberpunk (onglet Monde, sous "Aller à")
+  Menu déroulant de catégorie + filtre ; un clic sur un lieu = téléportation de la caméra.
+  875 lieux extraits des fichiers du jeu (positions exactes) : 173 fast travel (bornes + métro),
+  charcudocs, fixers, armuriers, vêtements, nourriture, médecins, netrunners, brocanteurs, joytoys,
+  planques/appartements, autofixers, courses, tarots, activités, missions de rue.
+  Mes points : placez la caméra, tapez un nom, "Ajouter ma position" (✕ pour supprimer).
+  Points partagés : tout fichier points-<nom>.tsv posé dans ce dossier (même format, 1re colonne = nom
+  de la catégorie, ex. « Points de Logan ») apparaît comme une catégorie en plus, sans toucher à Mes points.
+  Pour partager les vôtres : copiez mes-points.tsv en points-<votre nom>.tsv et remplacez « Mes points »
+  par « Points de <votre nom> » en début de ligne.
+  Fichiers : lieux.tsv (lieux du jeu), mes-points.tsv (les vôtres, modifiable à la main).
+  Refaire l'extraction (après une mise à jour du jeu) : lancer NCWE avec NCWE_FR_EXTRACT=1
+  (marqueurs de carte) puis NCWE_FR_EXTRACT=1 + NCWE_FR_EXTRACT_FT=1 (bornes, ~6 min),
+  ranger lieux-bruts.tsv / fast-travel-bruts.tsv dans outils\extraction\, puis
+  powershell -File outils\construire-lieux.ps1
+
+Outil Nettoyage (bouton 🧹 dans la barre d'outils, sous Ascenseurs)
+  1. Activez le balai : une carte s'ouvre (Rayon, Familles).
+  2. "📍 Choisir le point", puis un clic au sol dans la vue 3D : anneau + objets visés en rouge, avec leur nombre.
+  3. "🧹 Nettoyer" : tout part en une fois ; Ctrl+Z annule. Échap annule le choix du point.
+  Familles perso : sélectionnez des objets types, nommez la famille dans le menu Familles, "Créer" (✕ pour supprimer).
+  Catégories cochées par défaut : déchets, nourriture et boissons, emballages, papiers, chiffons/mégots,
+  saletés au sol. Décochées : dégâts (impacts, sang…), barricades et barbelés, poubelles et bennes,
+  graffitis, végétation sèche. Le décor de scène (logos, drapeaux, panneaux, béton…) n'est jamais visé.
+  Règles modifiables : nettoyage.tsv (catégorie, oui/non, morceau du chemin du modèle).
+  outils\liste-objets-supprimes.csv : les 246 modèles que vous avez supprimés à la main, avec leur catégorie.
+
+Rayon X (bouton 🩻 juste sous l'outil Sélection, cochable / décochable)
+  Coché : la sélection rectangle (Maj + glisser dans la vue 3D) prend tout ce qui est dans le rectangle,
+  y compris les objets cachés derrière d'autres (murs, plafonds…). Ctrl + Maj + glisser ajoute à la sélection.
+  Décoché : comportement normal de NCWE (seulement ce qui est visible à l'écran).
+  Même portée que NCWE : objets affichés, à moins de 300 m, modifiables. État mémorisé dans rayon-x.txt.
+
+Recompiler (si src\*.cs change, NCWE ferme)
+  C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:library /optimize+ /r:System.Core.dll /out:NCWE.FR.dll src\NcweFr.cs src\SelectionPanel.cs src\Tools.cs src\Extract.cs src\Places.cs src\Cleaning.cs src\XRay.cs src\Team.cs
