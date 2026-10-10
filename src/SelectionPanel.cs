@@ -558,6 +558,7 @@ namespace NcweFr
         static void Delete(List<string> ids, string label, int readOnly)
         {
             if (ids.Count == 0) { SetStatus("Rien de supprimable (objets en lecture seule)."); return; }
+            if (!PipeIsMine()) { SetStatus(OtherNcweMessage); return; }
             SetStatus("Suppression de " + ids.Count + " objets « " + label + " »…");
             // avec leurs collisions et leurs sons associes (sinon murs invisibles / sons fantomes)
             var cols = new List<string>(); var sounds = new List<string>();

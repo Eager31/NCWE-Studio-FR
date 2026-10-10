@@ -1,4 +1,4 @@
-# Lance NCWE Studio en francais (plugin NCWE.FR.dll), quelle que soit la version installee.
+﻿# Lance NCWE Studio en francais (plugin NCWE.FR.dll), quelle que soit la version installee.
 # Version utilisee : celle de chemin-ncwe.txt si present, sinon la plus recente trouvee
 # dans les dossiers voisins de ce dossier (ex. E:\Nouveau dossier\NCWE-Studio-*\NCWE.Studio.exe).
 param([switch]$Afficher)
@@ -34,5 +34,16 @@ function Find-Ncwe {
 
 $exe = Find-Ncwe
 if ($Afficher) { "NCWE utilise : $exe"; return }
+
+# Un seul NCWE à la fois : les fenêtres partagent le même canal de commande (outils, Claude),
+# une action pourrait partir dans la mauvaise fenêtre.
+$ouverts = @(Get-Process NCWE.Studio -ErrorAction SilentlyContinue)
+if ($ouverts.Count -gt 0) {
+    Add-Type -AssemblyName System.Windows.Forms
+    $r = [System.Windows.Forms.MessageBox]::Show(
+        "NCWE est déjà ouvert ($($ouverts.Count) fenêtre(s)).`n`nDeux NCWE en même temps se gênent (téléportation, suppressions, Claude). Ouvrir quand même une autre fenêtre ?",
+        'NCWE Studio (FR)', [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning)
+    if ($r -ne [System.Windows.Forms.DialogResult]::Yes) { return }
+}
 $env:DOTNET_STARTUP_HOOKS = Join-Path $here 'NCWE.FR.dll'
 Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe -Parent)

@@ -34,6 +34,7 @@ namespace NcweFr
             try
             {
                 if (xrayButton == null) CreateXRayTool(window, content);
+                SetupNativeShortcuts(window);
             }
             catch (Exception e) { LogOnce("rayon x: " + e.GetBaseException()); xrayButton = new object(); }
         }

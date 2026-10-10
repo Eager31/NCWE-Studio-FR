@@ -66,7 +66,8 @@ namespace NcweFr
             if (mainWindow == null) return;
             int off = IntPtr.Size;                    // MSG.message
             int msg = Marshal.ReadInt32(msgPtr, off);
-            CleanMouseFilter(msgPtr, msg);            int wOff = IntPtr.Size * 2, lOff = IntPtr.Size * 3;
+            CleanMouseFilter(msgPtr, msg);
+            int wOff = IntPtr.Size * 2, lOff = IntPtr.Size * 3;
 
             // fin du geste de rotation libre : Maj ou bouton gauche relache
             if (freeRotate && (!Down(VK_SHIFT) || !Down(VK_LBUTTON))) SetFreeRotate(false);
@@ -84,6 +85,7 @@ namespace NcweFr
             bool mods = HeldNow(VK_CONTROL) || HeldNow(VK_MENU) || HeldNow(VK_SHIFT);
             if (mods) return;
             if (vk != 'R' && vk != 'T' && vk != 'G') return;
+            if (vk != 'G' && NativeShortcuts()) return;     // beta 5+ : R et T sont des raccourcis natifs de NCWE (voir Camera.cs)
             if (TypingInField()) return;
 
             if (vk == 'G')
@@ -154,6 +156,7 @@ namespace NcweFr
             if (items == null) { LoadSelection(); lock (sync) items = new List<Item>(currentItems); }
             if (items.Count == 0) { SetStatus("Sélectionnez d'abord un ou plusieurs objets."); return; }
             if (items.Count > 50) { SetStatus("Alignement limité à 50 objets à la fois."); return; }
+            if (!PipeIsMine()) { SetStatus(OtherNcweMessage); return; }
             var sb = new StringBuilder();
             int floors = 0, walls = 0, none = 0;
             foreach (Item it in items)

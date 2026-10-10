@@ -210,13 +210,16 @@ namespace NcweFr
             th.IsBackground = true; th.Start();
         }
 
+        // Dans ce NCWE-ci (pas par le canal partage : avec deux NCWE ouverts, l'autre fenetre se teleportait).
         static void Teleport(Place p)
         {
-            string req = p.HasView
-                ? "{\"op\":\"api.camera\",\"client\":" + Q(Client) + ",\"position\":" + P(p.X, p.Y, p.Z) + ",\"heading\":" + V(p.Heading) + ",\"pitch\":" + V(p.Pitch) + ",\"wait\":false}"
-                : "{\"op\":\"api.camera\",\"client\":" + Q(Client) + ",\"look_at\":" + P(p.X, p.Y, p.Z + 1) + ",\"distance\":14,\"pitch\":-25,\"wait\":false}";
-            var r = Call(req, 15000);
-            if (!Ok(r)) LogOnce("teleportation: " + Json.Write(r));
+            if (p.HasView) { SetCameraGame(p.X, p.Y, p.Z, p.Heading, p.Pitch); return; }
+            // lieu sans vue enregistree : on se place a 14 m, en regardant le point d'un peu au-dessus, cap actuel garde
+            double[] cam = CameraGame();
+            double heading = cam != null ? cam[3] : 0, pitch = -25;
+            double h = heading * Math.PI / 180, pr = pitch * Math.PI / 180;
+            double fx = -Math.Sin(h) * Math.Cos(pr), fy = Math.Cos(h) * Math.Cos(pr), fz = Math.Sin(pr);   // cap 0 = +Y, sens trigo
+            SetCameraGame(p.X - fx * 14, p.Y - fy * 14, p.Z + 1 - fz * 14, heading, pitch);
         }
 
         static void AddMyPoint()
@@ -225,13 +228,9 @@ namespace NcweFr
             if (name.Length == 0) name = "Point " + (myPlaces.Count + 1);
             RunPlaceOp(delegate
             {
-                var st = Call("{\"op\":\"api.status\",\"client\":" + Q(Client) + "}", 10000);
-                object cam; if (!Ok(st) || !st.TryGetValue("camera", out cam)) return;
-                var c = (Dictionary<string, object>)cam;
-                double[] pos = Vec(c, "position");
-                if (pos == null) return;
-                var p = new Place { Cat = MyPoints, Name = name, X = pos[0], Y = pos[1], Z = pos[2], HasView = true };
-                object h, pi; if (c.TryGetValue("heading", out h)) p.Heading = Convert.ToDouble(h); if (c.TryGetValue("pitch", out pi)) p.Pitch = Convert.ToDouble(pi);
+                double[] c = CameraGame();                // camera de CE NCWE (pas celle d'une autre fenetre)
+                if (c == null) return;
+                var p = new Place { Cat = MyPoints, Name = name, X = c[0], Y = c[1], Z = c[2], HasView = true, Heading = c[3], Pitch = c[4] };
                 lock (myPlaces) { myPlaces.Add(p); SaveMyPoints(); }
                 pendingPlacesRefresh = true;
             });

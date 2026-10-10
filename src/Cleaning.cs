@@ -544,6 +544,7 @@ namespace NcweFr
             cleanBusy = true;
             try
             {
+                if (!PipeIsMine()) { CleanSetStatus(OtherNcweMessage); return; }
                 double radius = CleanRadius();
                 var perCat = new Dictionary<string, int>();
                 var cols = new List<string>(); var sounds = new List<string>();
