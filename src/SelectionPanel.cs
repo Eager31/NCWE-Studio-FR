@@ -77,6 +77,7 @@ namespace NcweFr
                 PlacesTick(content);
                 PlacesUiTick();
                 CleanTick(window, content);
+                EffectsTick(window);
                 if (hostSection == null && popup == null) return;
 
                 int ver, sv; int count;

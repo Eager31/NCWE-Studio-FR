@@ -92,6 +92,13 @@ Ce qui part avec un objet supprimé (Nettoyage 🧹 et boutons Supprimer du pann
   (La touche Suppr de NCWE, elle, n'enlève que la collision placée exactement sur l'objet.)
   outils\liste-objets-supprimes.csv : les 246 modèles que vous avez supprimés à la main, avec leur catégorie.
 
+Effets par type (panneau Ajouter, onglet Effets)
+  Liste « Type d'effet » au-dessus de la recherche : Vapeur, Fumée, Feu, Explosions, Étincelles, Électricité,
+  Poussière, Eau et pluie, Météo, Hologrammes, Lumières/néons, Débris, Sang, Insectes, Végétation, Écrans,
+  Véhicules, Armes, Personnages, Appareils, Quêtes, Autres (nombre de fichiers entre parenthèses).
+  Type déduit du dossier/nom du fichier .particle/.effect. La recherche filtre en plus du type.
+  Règles : tableau EffectTypes dans src\Effets.cs.
+
 Rayon X (bouton 🩻 juste sous l'outil Sélection, cochable / décochable)
   Coché : la sélection rectangle (Maj + glisser dans la vue 3D) prend tout ce qui est dans le rectangle,
   y compris les objets cachés derrière d'autres (murs, plafonds…). Ctrl + Maj + glisser ajoute à la sélection.
@@ -99,4 +106,4 @@ Rayon X (bouton 🩻 juste sous l'outil Sélection, cochable / décochable)
   Même portée que NCWE : objets affichés, à moins de 300 m, modifiables. État mémorisé dans rayon-x.txt.
 
 Recompiler (si src\*.cs change, NCWE ferme)
-  C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:library /optimize+ /r:System.Core.dll /out:NCWE.FR.dll src\NcweFr.cs src\SelectionPanel.cs src\Tools.cs src\Extract.cs src\Places.cs src\Cleaning.cs src\XRay.cs src\Team.cs src\Associes.cs src\Camera.cs
+  C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:library /optimize+ /r:System.Core.dll /out:NCWE.FR.dll src\NcweFr.cs src\SelectionPanel.cs src\Tools.cs src\Extract.cs src\Places.cs src\Cleaning.cs src\XRay.cs src\Team.cs src\Associes.cs src\Camera.cs src\Effets.cs
