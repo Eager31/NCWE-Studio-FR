@@ -1,4 +1,4 @@
-# Outils de construction NCWE
+﻿# Outils de construction NCWE
 
 Ces outils travaillent avec NCWE Studio ouvert. Ils passent par `..\ncwe-mcp.cmd`.
 
@@ -110,3 +110,19 @@ Autres champs : `i` (lumen), `r` (portée), `ombres`, `yaw`/`pitch` (spots, pitc
 6. Lancer `-Etape n` et regarder la capture. Pour corriger, Ctrl+Z (outil `undo`), modifier le JSON et relancer.
 
 Testé le 2026-10-09 sur une salle d'essai tournée de 30° : salle, ligne, cercle, chevrons (faces -Y et +X), cadre et lumière `#hex`. Tout a été annulé ensuite.
+
+## Maillage : trous, faces, détrompeur (NCWE beta 5)
+
+Sur un objet du plan (avec `m`), ou sur un objet existant dans `"maillage": [{ "id": "…", … }]` d'une étape :
+
+- `"trou": { "centre": [x, y, z], "largeur": 1.2, "hauteur": 2.1, "profondeur": 0.6, "encadrement": true }`
+  perce une ouverture (porte, fenêtre) dans le mesh. `encadrement` ferme proprement l'épaisseur (pas de bord vide). `"trous": [ … ]` pour plusieurs.
+- `"deux_faces": true` : visible des deux côtés. `"retourner": true` : faces retournées.
+- `"sans_tain": true` : mur volontairement visible d'un seul côté (opaque dehors, transparent dedans). Le détrompeur l'ignore.
+
+Contrôle des faces visibles (lecture seule, encadre en rouge ce qui est à l'envers) :
+
+- `construire.ps1 plans\x.json -Controler 2` : surfaces posées par l'étape 2 ; point intérieur = `"interieur": [x, y, z]` (local) de l'étape ou du plan, sinon le centre de la salle.
+- `detrompeur.ps1 -Interieur "x;y;z" [-Rayon 15] [-Tout]` : n'importe quelle pièce déjà construite (ex. le café).
+
+Règles de propreté : murs bout à bout avec leurs tailles exactes (cache), pièces d'angle du même `Ensemble`, ouvertures avec encadrement, détrompeur après chaque étape de murs.

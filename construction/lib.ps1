@@ -204,6 +204,39 @@ function Chercher-Sons([string[]]$Mots = @(), $Boucle = $null, [double]$PorteeMa
     }
     return $res
 }
+# ---------------- canal direct de NCWE (opérations sans outil MCP : édition de maillage) ----------------
+function Ncwe-Api([string]$Op, [hashtable]$Arguments = @{}) {
+    $req = @{ op = $Op; client = 'Construction' } + $Arguments
+    $p = New-Object IO.Pipes.NamedPipeClientStream('.', 'ncwe-studio', [IO.Pipes.PipeDirection]::InOut)
+    try {
+        $p.Connect(10000)
+        $w = New-Object IO.StreamWriter($p, (New-Object Text.UTF8Encoding($false))); $w.AutoFlush = $true
+        $r = New-Object IO.StreamReader($p, [Text.Encoding]::UTF8)
+        $w.WriteLine(($req | ConvertTo-Json -Depth 20 -Compress))
+        $o = $r.ReadLine() | ConvertFrom-Json
+        if ($o.ok -eq $false) { throw ("NCWE {0} : {1}" -f $Op, $o.error) }
+        return $o
+    } finally { $p.Dispose() }
+}
+
+# Édition de maillage d'un objet : begin, opérations, end (une étape d'annulation). Revert si erreur.
+#   Maillage-Editer $id { Ncwe-Api 'api.meshedit.two_sided' @{ all = $true } }
+function Maillage-Editer([string]$Id, [scriptblock]$Ops) {
+    Ncwe-Api 'api.meshedit.begin' @{ id = $Id } | Out-Null
+    $ok = $false
+    try { $res = & $Ops; $ok = $true; return $res }
+    finally {
+        if ($ok) { Ncwe-Api 'api.meshedit.end' | Out-Null }
+        else { try { Ncwe-Api 'api.meshedit.revert' | Out-Null; Ncwe-Api 'api.meshedit.end' | Out-Null } catch { } }
+    }
+}
+
+# Faces d'un objet (lecture seule) : liste brute renvoyée par NCWE.
+function Maillage-Faces([string]$Id, [int]$Limite = 5000) {
+    Ncwe-Api 'api.meshedit.begin' @{ id = $Id } | Out-Null
+    try { return (Ncwe-Api 'api.meshedit.faces' @{ limit = $Limite }) }
+    finally { try { Ncwe-Api 'api.meshedit.end' | Out-Null } catch { } }
+}
 # ---------------- familles ----------------
 $script:Familles = @(
     @('Sol', '\\floor|_floor|\\sol|tatami|carpet|rug'),

@@ -2,12 +2,14 @@
 #   powershell -File construire.ps1 plans\arene.json                 liste les étapes (ne pose rien)
 #   powershell -File construire.ps1 plans\arene.json -Verifier 2     vérifie l'étape 2 et la dessine dans la vue (rien n'est posé)
 #   powershell -File construire.ps1 plans\arene.json -Etape 2        construit l'étape 2 (un Ctrl+Z annule l'étape) + capture
+#   powershell -File construire.ps1 plans\arene.json -Controler 2    détrompeur : faces des murs/sols/plafonds de l'étape tournées vers l'intérieur ?
 #   -Etape 1-3 : plusieurs étapes · -SansCapture : pas de capture
 # Format du plan : voir LISEZMOI-CONSTRUCTION.md
 param(
     [Parameter(Mandatory = $true)][string]$Plan,
     [string]$Etape,
     [string]$Verifier,
+    [string]$Controler,
     [switch]$SansCapture
 )
 . "$PSScriptRoot\lib.ps1"
@@ -57,6 +59,7 @@ $script:items = $null; $script:elems = $null; $script:boites = $null; $script:sa
 function Objet($m, $p, [double]$yaw = 0, [double]$pitch = 0, [double]$roll = 0, $s = $null, $app = $null, $col = $false, $nom = $null, $sol = $null) {
     $chemin = Chemin $m
     $pw = if (@($p).Count -eq 2) { $w = Monde @($p[0], $p[1], 0); @($w[0], $w[1]) } else { Monde $p }
+    $script:nomObjet = $(if ($nom) { $nom } else { $script:nomCourant })
     $it = @{ asset = $chemin; position = @($pw); rotation = @{ yaw = [Math]::Round($yaw + $script:Cap, 2); pitch = $pitch; roll = $roll }; ground = $(if ($sol) { $sol } elseif (@($p).Count -eq 2) { 'bottom' } else { 'none' }); name = $(if ($nom) { $nom } else { $script:nomCourant }) }
     if ($null -ne $s) { $it.scale = $(if (@($s).Count -eq 3) { @($s | ForEach-Object { [double]$_ }) } else { [double]$s }) }
     if ($app) { $it.appearance = [string]$app }
@@ -64,7 +67,29 @@ function Objet($m, $p, [double]$yaw = 0, [double]$pitch = 0, [double]$roll = 0, 
     $script:items.Add($it)
 }
 function ObjetDe($o, $p, [double]$yawPlus = 0) {
-    Objet (Champ $o 'm') $p ([double](Champ $o 'yaw' 0) + $yawPlus) ([double](Champ $o 'pitch' 0)) ([double](Champ $o 'roll' 0)) (Champ $o 's') (Champ $o 'app') ([bool](Champ $o 'col' $false)) (Champ $o 'n') (Champ $o 'sol')
+    $nom = Champ $o 'n'; if ([bool](Champ $o 'sans_tain' $false)) { $nom = $(if ($nom) { $nom } else { $script:nomCourant }) + '_sanstain' }
+    Objet (Champ $o 'm') $p ([double](Champ $o 'yaw' 0) + $yawPlus) ([double](Champ $o 'pitch' 0)) ([double](Champ $o 'roll' 0)) (Champ $o 's') (Champ $o 'app') ([bool](Champ $o 'col' $false)) $nom (Champ $o 'sol')
+    # édition de maillage demandée sur cet objet (appliquée juste après la pose)
+    $ops = @{}
+    foreach ($k in 'trou', 'trous', 'deux_faces', 'retourner') { $v = Champ $o $k; if ($null -ne $v) { $ops[$k] = $v } }
+    if ($ops.Count) { $script:maillages.Add(@{ index = $script:items.Count - 1; ops = $ops }) }
+}
+
+# Opérations de maillage d'un objet posé ou existant (id) :
+#   trou / trous : { "centre": [x,y,z] local, "largeur": 1.2, "hauteur": 2.1, "profondeur": 0.6, "encadrement": true }
+#   deux_faces : true (visible des deux côtés) · retourner : true (faces retournées)
+function Maillage-Ops([string]$Id, $ops) {
+    Maillage-Editer $Id {
+        $trous = @(); if ($ops.trou) { $trous += $ops.trou }; if ($ops.trous) { $trous += @($ops.trous) }
+        foreach ($tr in $trous) {
+            $a = @{ center = @(Monde @($tr.centre | ForEach-Object { [double]$_ })); width = [double](Champ $tr 'largeur' 1); height = [double](Champ $tr 'hauteur' 2) }
+            if (Champ $tr 'profondeur') { $a.depth = [double]$tr.profondeur }
+            if ($null -ne (Champ $tr 'encadrement')) { $a.jambs = [bool]$tr.encadrement } else { $a.jambs = $true }
+            Ncwe-Api 'api.meshedit.cut_opening' $a | Out-Null
+        }
+        if ($ops.retourner) { Ncwe-Api 'api.meshedit.select' @{ select = @{ all = $true } } | Out-Null; Ncwe-Api 'api.meshedit.flip' | Out-Null }
+        if ($ops.deux_faces) { Ncwe-Api 'api.meshedit.two_sided' @{ all = $true } | Out-Null }
+    }
 }
 function Lumiere($l, $p) {
     $e = @{ kind = 'light'; light_type = (Champ $l 'type' 'point'); position = @(Monde $p); name = (Champ $l 'n' ($script:nomCourant + '_lumiere')) }
@@ -189,6 +214,7 @@ function Salle($s) {
 }
 
 function Preparer($e, [int]$i) {
+    $script:maillages = New-Object Collections.Generic.List[object]
     $script:items = New-Object Collections.Generic.List[object]; $script:elems = New-Object Collections.Generic.List[object]; $script:salles = New-Object Collections.Generic.List[object]
     $script:nomCourant = "{0}_{1}" -f $nomPlan, (Champ $e 'id' $i)
     if (Champ $e 'salle') { Salle $e.salle }
@@ -203,8 +229,50 @@ function Vue($e) {
     return $a
 }
 
+# ---------- détrompeur ----------
+# Pour chaque mur / sol / plafond posé par l'étape : part des faces tournées vers le point intérieur.
+# Point intérieur : « interieur » de l'étape ou du plan (local), sinon centre de la salle.
+function Vec3($v) { if ($null -eq $v) { return $null }; $a = @($v | ForEach-Object { [double]$_ }); if ($a.Count -lt 3) { return $null }; return $a }
+function Controler-Etape($e, [int]$i) {
+    $int = Champ $e 'interieur' (Champ $pl 'interieur')
+    if ($int) { $pi = Monde @($int | ForEach-Object { [double]$_ }) }
+    elseif ($script:salles.Count) { $b = $script:salles[0]; $pi = @($b.center[0], $b.center[1], ($b.center[2] + $b.height / 2)) }
+    else { throw "Détrompeur : donnez « interieur » (point dans la pièce, en local) dans l'étape ou le plan." }
+    $q = Ncwe-Api 'api.query' @{ center = @($pi); radius = 80; text = $script:nomCourant; limit = 2000; show = $false }
+    $objs = @($q.objects | Where-Object { $_.name -and $_.name.StartsWith($script:nomCourant) -and $_.asset })
+    $ann = New-Object Collections.Generic.List[object]; $n = 0; $mauvais = 0
+    foreach ($o in $objs) {
+        $fam = Famille $o.asset; $bx = $o.bounds
+        $fin = $bx -and ([Math]::Min([Math]::Min($bx.size[0], $bx.size[1]), $bx.size[2]) -lt 0.6)
+        if ($fam -notin 'Murs', 'Sol', 'Plafond' -and -not $fin) { continue }
+        $n++
+        if ($o.name -like '*_sanstain*') { Write-Output ("  {0} : sans tain (voulu)" -f $o.name); continue }
+        $r = Maillage-Faces $o.id
+        $vers = 0.0; $dos = 0.0
+        foreach ($fc in @($r.faces)) {
+            $nm = Vec3 (Champ $fc 'normal'); $c = Vec3 (Champ $fc 'center' (Champ $fc 'centre'))
+            if (-not $nm -or -not $c) { continue }
+            $a = [double](Champ $fc 'area' 1)
+            $d = $nm[0] * ($pi[0] - $c[0]) + $nm[1] * ($pi[1] - $c[1]) + $nm[2] * ($pi[2] - $c[2])
+            if ($d -gt 0) { $vers += $a } else { $dos += $a }
+        }
+        $tot = $vers + $dos
+        $verdict = if ($tot -le 0) { 'faces illisibles' } elseif ($vers / $tot -ge 0.8) { 'OK' } elseif ($dos / $tot -ge 0.8) { 'À L''ENVERS' } else { 'deux faces / mixte' }
+        if ($verdict -eq 'À L''ENVERS') { $mauvais++; if ($bx) { $ann.Add(@{ type = 'box'; min = @($bx.min); max = @($bx.max); color = 'red' }) } }
+        Write-Output ("  {0} [{1}] : {2} (vers l'intérieur {3:P0})" -f $o.name, $o.id, $verdict, $(if ($tot) { $vers / $tot } else { 0 }))
+    }
+    $ann.Add(@{ type = 'point'; position = @($pi); color = 'green' })
+    Ncwe 'annotate' @{ items = @($ann); duration = 300; clear = $true } | Out-Null
+    Write-Output ("Détrompeur étape {0} : {1} surfaces contrôlées, {2} à l'envers (encadrées en rouge, point intérieur en vert)" -f $i, $n, $mauvais)
+    if ($mauvais) { Write-Output "  Corriger : « retourner »: true ou « deux_faces »: true sur l'objet (ou yaw +180), ou « sans_tain »: true si c'est voulu." }
+}
 # ---------- exécution ----------
 try {
+    if ($Controler) {
+        foreach ($i in (Etapes $Controler $etapes.Count)) { $e = $etapes[$i - 1]; Preparer $e $i; Controler-Etape $e $i }
+        return
+    }
+
     if (-not $Etape -and -not $Verifier) {
         Write-Output ("Plan « {0} » : {1} étapes · origine {2} · cap {3}°" -f $nomPlan, $etapes.Count, ((Liste $pl.origine) -join ';'), (Champ $pl 'cap' 0))
         for ($i = 1; $i -le $etapes.Count; $i++) { $e = $etapes[$i - 1]; Preparer $e $i; Write-Output ("  {0}. {1} : {2} objets, {3} lumières{4}" -f $i, (Champ $e 'nom' ''), $script:items.Count, $script:elems.Count, $(if ($script:salles.Count) { ', salle' } else { '' })) }
@@ -246,8 +314,13 @@ try {
             $pa = @{ items = $script:items.ToArray() }; if ($script:elems.Count) { $pa.elements = $script:elems.ToArray() }
             $r = Ncwe 'place_objects' $pa
             $ids += @($r.ids).Count + @($r.element_ids).Count
+            $poses = @($r.ids)
+            foreach ($mo in $script:maillages) {
+                if ($mo.index -lt $poses.Count) { Maillage-Ops ([string]$poses[$mo.index]) $mo.ops; Write-Output ("  maillage : " + (($mo.ops.Keys) -join ', ') + " sur " + $poses[$mo.index]) }
+            }
             if (@($r.notes).Count) { Write-Output ("  notes : " + (@($r.notes) -join ' | ')) }
         }
+        foreach ($m in (Liste (Champ $e 'maillage'))) { Maillage-Ops ([string]$m.id) $m; Write-Output ("  maillage : objet existant " + $m.id) }
         Write-Output ("Étape {0} « {1} » posée : {2} objets, {3} lumières, {4} salle(s) ({5} créés) · Ctrl+Z annule" -f $i, (Champ $e 'nom' ''), $script:items.Count, $script:elems.Count, $script:salles.Count, $ids)
         if (-not $SansCapture) { $v = Vue $e; if ($v) { Write-Output ("  capture : " + (Ncwe-Capture (Join-Path $Racine "plans\captures\$nomPlan-$i.png") $v)) } }
     }
