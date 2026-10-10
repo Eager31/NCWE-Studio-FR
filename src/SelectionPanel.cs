@@ -1,4 +1,4 @@
-// Panneau "Selection" : des que 2 objets ou plus sont selectionnes, liste les props selectionnes
+﻿// Panneau "Selection" : des que 2 objets ou plus sont selectionnes, liste les props selectionnes
 // regroupes par mesh, avec des actions rapides (isoler, retirer, selectionner / supprimer les similaires).
 // Passe par l'API officielle du Studio (pipe "ncwe-studio", le meme que les agents IA) :
 // chaque suppression est une etape d'annulation normale (Ctrl+Z).
@@ -23,13 +23,13 @@ namespace NcweFr
 
         class Item
         {
-            public string Id, Name, Asset, Node; public bool Editable, HasBounds;
+            public string Id, Name, Asset, Node, Kind; public bool Editable, HasBounds;
             public double X, Y, Z, Yaw, MinX, MinY, MinZ, MaxX, MaxY, MaxZ;
         }
         static List<Item> currentItems = new List<Item>();
         static volatile float radiusValue = 50;
         static object autoAlignBox;
-        class Group { public string Key, Label, Asset; public List<Item> Items = new List<Item>(); }
+        class Group { public string Key, Label, Asset, Kind, Node, Stem; public List<Item> Items = new List<Item>(); }
 
         // --- etat partage entre le thread de l'API et le thread UI ---
         static readonly object sync = new object();
@@ -65,9 +65,11 @@ namespace NcweFr
                 if (scans > 20) DumpTree(content);
                 if (radiusBox != null) radiusValue = (float)ReadRadius();
                 if (autoAlignBox != null) autoAlign = IsChecked(autoAlignBox);
+                if (withLinkedBox != null && IsChecked(withLinkedBox) != withLinked) SetWithLinked(IsChecked(withLinkedBox));
                 if (poller == null)
                 {
                     skipNames.Add(PanelName);
+                    withLinked = ReadWithLinked();
                     Type handler = FindType("Microsoft.UI.Xaml.RoutedEventHandler");
                     clickDelegate = Delegate.CreateDelegate(handler, typeof(Plugin).GetMethod("OnPanelClick", BindingFlags.NonPublic | BindingFlags.Static));
                     poller = new Thread(PollLoop); poller.IsBackground = true; poller.Name = "ncwe-fr-selection"; poller.Start();
@@ -195,6 +197,7 @@ namespace NcweFr
             x.Append("<CheckBox x:Name='autoalign' Grid.Column='1' MinWidth='0' Content='Auto' IsChecked='" + (autoAlign ? "True" : "False") + "' ToolTipService.ToolTip='Auto-aligner : aligne l&apos;objet sur le sol ou le mur quand vous le lâchez après un déplacement'/>");
             x.Append("</Grid>");
             x.Append("<TextBlock FontSize='12' Opacity='0.6' TextWrapping='Wrap' Text='R pivoter · T déplacer · Maj pendant une rotation : libre'/>");
+            x.Append("<CheckBox x:Name='withlinked' MinWidth='0' Content='Sélectionner aussi les liés (collisions, sons, lumières, effets)' IsChecked='" + (withLinked ? "True" : "False") + "' ToolTipService.ToolTip='À chaque sélection, ajoute ce qui est posé sur les objets choisis : collisions, sons, lumières, particules. Ils partent aussi à la suppression.'/>");
 
             // rayon
             x.Append("<Grid ColumnSpacing='8'><Grid.ColumnDefinitions><ColumnDefinition Width='*'/><ColumnDefinition Width='Auto'/></Grid.ColumnDefinitions>");
@@ -254,7 +257,7 @@ namespace NcweFr
             Func<string, object> F = delegate (string n) { return find.Invoke(panel, new object[] { n }); };
             statusText = F("status"); radiusBox = F("radius"); summaryText = F("summary");
             confirmBar = F("confirmBar"); confirmText = F("confirmText");
-            autoAlignBox = F("autoalign");
+            autoAlignBox = F("autoalign"); withLinkedBox = F("withlinked");
             checkBoxes.Clear();
             for (int i = 0; i < shown; i++) checkBoxes.Add(F("c_" + i));
             foreach (string n in new[] { "b_align", "b_chkall", "m_delchk", "m_delchksim", "b_confirm", "b_cancel" }) AttachClick(F(n), n);
@@ -478,14 +481,24 @@ namespace NcweFr
                             if (!string.IsNullOrEmpty(g.Asset)) { if (rings.Length > 0) rings.Append(','); rings.Append(Ring(g, radius, "red")); }
                         }
                     }
+                    var cols = new List<string>(); var sounds = new List<string>(); var lights = new List<string>();
+                    FindAssociated(Client, ids, null, cols, sounds, lights);
+                    var assoc = new List<string>(cols); assoc.AddRange(sounds); assoc.AddRange(lights);
+                    assoc.RemoveAll(delegate (string a) { return set.Contains(a); });
                     if (gen != previewGen) return;
                     var sb = new StringBuilder("{\"type\":\"objects\",\"color\":\"red\",\"ids\":[");
                     for (int i = 0; i < ids.Count && i < 2000; i++) { if (i > 0) sb.Append(','); sb.Append(Q(ids[i])); }
                     sb.Append("]}");
+                    if (assoc.Count > 0)
+                    {
+                        sb.Append(",{\"type\":\"objects\",\"color\":\"orange\",\"ids\":[");
+                        for (int i = 0; i < assoc.Count && i < 2000; i++) { if (i > 0) sb.Append(','); sb.Append(Q(assoc[i])); }
+                        sb.Append("]}");
+                    }
                     if (rings.Length > 0) sb.Append(',').Append(rings);
                     Annotate(sb.ToString());
                     lastRingsKey = "";
-                    SetConfirm(ids.Count + (ids.Count > 1 ? " objets seront supprimés" : " objet sera supprimé") + " (encadrés en rouge dans la vue). Ctrl+Z annulera.");
+                    SetConfirm(ids.Count + (ids.Count > 1 ? " objets seront supprimés" : " objet sera supprimé") + AssociatedText(cols, sounds, lights) + " (rouge" + (assoc.Count > 0 ? " ; liés en orange" : "") + " dans la vue). Ctrl+Z annulera.");
                 }
                 catch (Exception e) { LogOnce("apercu: " + e.Message); }
             });
@@ -555,33 +568,115 @@ namespace NcweFr
             if (!Ok(r)) SetStatus("La sélection a échoué : " + Err(r));
         }
 
+        // ---------- « Sélectionner aussi les liés » ----------
+        // A chaque nouvelle selection : ajoute les collisions posees sur les objets, leurs sons, lumieres et effets.
+        // Les collisions que NCWE lie deja a un mesh (elles le suivent) ne sont pas ajoutees : sinon un
+        // deplacement les bougerait deux fois.
+        static object withLinkedBox;
+        static volatile bool withLinked = true;   // relu dans selection-lies.txt au demarrage
+        static readonly HashSet<string> linkedDone = new HashSet<string>(StringComparer.Ordinal);
+        const int LinkedMaxObjects = 500;
+
+        static bool ReadWithLinked()
+        {
+            try { string f = Path.Combine(dir, "selection-lies.txt"); return !File.Exists(f) || File.ReadAllText(f).Trim() != "0"; }
+            catch { return true; }
+        }
+
+        static void SetWithLinked(bool on)
+        {
+            withLinked = on;
+            try { File.WriteAllText(Path.Combine(dir, "selection-lies.txt"), on ? "1" : "0"); } catch { }
+            lock (sync) linkedDone.Clear();
+            if (on) forcePoll = true;
+        }
+
+        static readonly HashSet<string> holderKinds = new HashSet<string> { "mesh", "instanced_mesh", "entity", "door", "decal" };
+
+        static void AddLinkedToSelection()
+        {
+            List<Item> cur; lock (sync) cur = currentItems;
+            var inSel = new HashSet<string>(StringComparer.Ordinal);
+            foreach (Item it in cur) inSel.Add(it.Id);
+            var todo = new List<string>();
+            lock (sync)
+            {
+                linkedDone.RemoveWhere(delegate (string id) { return !inSel.Contains(id); });
+                foreach (Item it in cur) if (holderKinds.Contains(it.Kind ?? "") && linkedDone.Add(it.Id)) todo.Add(it.Id);
+            }
+            if (todo.Count == 0) return;
+            if (todo.Count > LinkedMaxObjects) { SetStatus("Plus de " + LinkedMaxObjects + " objets : les liés ne sont pas ajoutés automatiquement."); return; }
+            if (!PipeIsMine()) return;
+            var cols = new List<string>(); var sounds = new List<string>(); var lights = new List<string>(); var followers = new HashSet<string>(StringComparer.Ordinal);
+            FindAssociated(Client, todo, null, cols, sounds, lights, followers);
+            var add = new List<string>();
+            foreach (List<string> l in new[] { cols, sounds, lights })
+                foreach (string id in l) if (!followers.Contains(id) && inSel.Add(id)) add.Add(id);
+            if (add.Count == 0) return;
+            var ids = new List<string>();
+            foreach (Item it in cur) ids.Add(it.Id);
+            ids.AddRange(add);
+            Select(ids);
+            SetStatus("+ " + add.Count + " lié" + (add.Count > 1 ? "s" : "") + " ajouté" + (add.Count > 1 ? "s" : "") + " à la sélection (collisions, sons, lumières, effets).");
+        }
+
         static void Delete(List<string> ids, string label, int readOnly)
         {
             if (ids.Count == 0) { SetStatus("Rien de supprimable (objets en lecture seule)."); return; }
             if (!PipeIsMine()) { SetStatus(OtherNcweMessage); return; }
             SetStatus("Suppression de " + ids.Count + " objets « " + label + " »…");
             // avec leurs collisions et leurs sons associes (sinon murs invisibles / sons fantomes)
-            var cols = new List<string>(); var sounds = new List<string>();
-            FindAssociated(Client, ids, null, cols, sounds);
-            var r = DeleteWithAssociated(Client, ids, cols, sounds);
+            var cols = new List<string>(); var sounds = new List<string>(); var lights = new List<string>();
+            FindAssociated(Client, ids, null, cols, sounds, lights);
+            var r = DeleteWithAssociated(Client, ids, cols, sounds, lights);
             if (Ok(r))
             {
-                SetStatus(ids.Count + " objets « " + label + " » supprimés" + AssociatedText(cols, sounds) + " (Ctrl+Z pour annuler)."
+                SetStatus(ids.Count + " objets « " + label + " » supprimés" + AssociatedText(cols, sounds, lights) + " (Ctrl+Z pour annuler)."
                     + (readOnly > 0 ? " " + readOnly + " en lecture seule ignorés." : ""));
             }
             else SetStatus("Suppression refusée : " + Err(r));
         }
 
-        // Objets charges avec exactement le meme mesh, dans le rayon autour du centre du groupe.
+        // Nom sans numero ni suffixe : « {L_Point}_020 » -> « {L_Point} », « NormalCollisionNode_092 / actor 3 » -> « NormalCollisionNode ».
+        static string NameStem(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return "";
+            int k = name.IndexOf(" / ", StringComparison.Ordinal); if (k > 0) name = name.Substring(0, k);
+            if (name.EndsWith(" copy", StringComparison.OrdinalIgnoreCase)) name = name.Substring(0, name.Length - 5);
+            string s = System.Text.RegularExpressions.Regex.Replace(name, @"[\s_#\-]*\d+$", "").Trim();
+            return s.Length > 0 ? s : name.Trim();
+        }
+
+        static string KindLabel(string kind)
+        {
+            switch (kind)
+            {
+                case "light": return "Lumière";
+                case "sound": return "Son";
+                case "collision": return "Collision";
+                case "particle": return "Particules";
+                case "effect": return "Effet";
+                case "decal": return "Décalque";
+                case "occluder": case "occluder_instanced": return "Occluder";
+                case "entity": return "Entité";
+                case "door": return "Porte";
+                default: return kind ?? "Objet";
+            }
+        }
+
+        // Objets charges similaires dans le rayon autour du centre du groupe :
+        // meme mesh, ou (sans mesh : lumiere, son, collision, effet…) meme type et meme nom sans numero.
         static List<string> FindSimilar(Group g, double radius)
         {
             var res = new List<string>();
-            if (string.IsNullOrEmpty(g.Asset)) { SetStatus("Ce groupe n'a pas de mesh : pas de recherche de similaires."); return res; }
+            bool byAsset = !string.IsNullOrEmpty(g.Asset);
+            if (!byAsset && string.IsNullOrEmpty(g.Kind)) { SetStatus("Type d'objet inconnu : pas de recherche de similaires."); return res; }
             double cx = 0, cy = 0, cz = 0;
             foreach (Item it in g.Items) { cx += it.X; cy += it.Y; cz += it.Z; }
             int n = g.Items.Count; cx /= n; cy /= n; cz /= n;
-            string stem = Path.GetFileNameWithoutExtension(g.Asset.Replace('\\', '/'));
-            string req = "{\"op\":\"api.query\",\"client\":" + Q(Client) + ",\"text\":" + Q(stem)
+            string stem = byAsset ? Path.GetFileNameWithoutExtension(g.Asset.Replace('\\', '/')) : g.Stem;
+            string req = "{\"op\":\"api.query\",\"client\":" + Q(Client) + (string.IsNullOrEmpty(stem) ? "" : ",\"text\":" + Q(stem))
+                + (byAsset ? "" : ",\"kinds\":[" + Q(g.Kind) + "],\"show\":false")
                 + ",\"radius\":" + radius.ToString(CultureInfo.InvariantCulture)
                 + ",\"center\":[" + cx.ToString(CultureInfo.InvariantCulture) + "," + cy.ToString(CultureInfo.InvariantCulture) + "," + cz.ToString(CultureInfo.InvariantCulture) + "]"
                 + ",\"limit\":5000}";
@@ -594,7 +689,8 @@ namespace NcweFr
             {
                 var d = o as Dictionary<string, object>;
                 if (d == null) continue;
-                if (!string.Equals(Str(d, "asset"), g.Asset, StringComparison.OrdinalIgnoreCase)) continue;
+                if (byAsset ? !string.Equals(Str(d, "asset"), g.Asset, StringComparison.OrdinalIgnoreCase)
+                    : Str(d, "kind") != g.Kind || Str(d, "node") != g.Node || !string.Equals(NameStem(Str(d, "name")), g.Stem, StringComparison.OrdinalIgnoreCase)) continue;
                 object ed; if (d.TryGetValue("editable", out ed) && ed is bool && !(bool)ed) continue;
                 res.Add(Str(d, "id"));
             }
@@ -626,7 +722,7 @@ namespace NcweFr
                             {
                                 forcePoll = false;
                                 if (changed) { lastIds = ids; lastPositions.Clear(); movedIds.Clear(); }
-                                if (n >= 1) LoadSelection();
+                                if (n >= 1) { LoadSelection(); if (withLinked) AddLinkedToSelection(); }
                                 else lock (sync) { selCount = 0; groups = new List<Group>(); currentItems = new List<Item>(); selSignature = ""; dataVersion++; }
                             }
                             if (track) { List<Item> cur; lock (sync) cur = currentItems; CheckAutoAlign(cur); }
@@ -651,7 +747,7 @@ namespace NcweFr
             {
                 var d = o as Dictionary<string, object>;
                 if (d == null) continue;
-                var it = new Item { Id = Str(d, "id"), Name = Str(d, "name"), Asset = Str(d, "asset"), Node = Str(d, "node") };
+                var it = new Item { Id = Str(d, "id"), Name = Str(d, "name"), Asset = Str(d, "asset"), Node = Str(d, "node"), Kind = Str(d, "kind") };
                 object ed; it.Editable = !(d.TryGetValue("editable", out ed) && ed is bool && !(bool)ed);
                 object pos; if (d.TryGetValue("position", out pos) && pos is List<object> && ((List<object>)pos).Count >= 3)
                 {
@@ -670,13 +766,15 @@ namespace NcweFr
                         it.MinX = mn[0]; it.MinY = mn[1]; it.MinZ = mn[2]; it.MaxX = mx[0]; it.MaxY = mx[1]; it.MaxZ = mx[2];
                     }
                 }
-                string key = !string.IsNullOrEmpty(it.Asset) ? it.Asset.ToLowerInvariant() : "node:" + (it.Node ?? it.Name);
+                // sans mesh (lumiere, son, collision…) : meme type + meme nom sans son numero
+                string stem = NameStem(it.Name);
+                string key = !string.IsNullOrEmpty(it.Asset) ? it.Asset.ToLowerInvariant() : "kind:" + it.Kind + "|" + it.Node + "|" + stem.ToLowerInvariant();
                 Group g;
                 if (!byKey.TryGetValue(key, out g))
                 {
-                    g = new Group { Key = key, Asset = it.Asset };
+                    g = new Group { Key = key, Asset = it.Asset, Kind = it.Kind, Node = it.Node, Stem = stem };
                     // le nom affiche est le nom du mesh tel quel (jamais traduit)
-                    g.Label = !string.IsNullOrEmpty(it.Asset) ? Path.GetFileName(it.Asset.Replace('\\', '/')) : (it.Node ?? it.Name);
+                    g.Label = !string.IsNullOrEmpty(it.Asset) ? Path.GetFileName(it.Asset.Replace('\\', '/')) : KindLabel(it.Kind) + " " + stem;
                     byKey[key] = g; order.Add(g);
                 }
                 g.Items.Add(it);

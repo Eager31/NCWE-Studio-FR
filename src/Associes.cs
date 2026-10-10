@@ -1,7 +1,8 @@
-// Ce qui part avec un objet supprime (Nettoyage et boutons de suppression du panneau Selection) :
+﻿// Ce qui part avec un objet supprime (Nettoyage et boutons de suppression du panneau Selection) :
 //  - ses collisions du jeu : celles que NCWE lui associe (linked.collision) et celles posees exactement
 //    sur lui sans lien avec un autre objet qui reste (sinon : murs invisibles qui bloquent le joueur) ;
-//  - ses sons : emetteurs poses sur lui, sauf s'ils sont aussi sur un autre objet qui reste.
+//  - ses sons : emetteurs poses sur lui, sauf s'ils sont aussi sur un autre objet qui reste ;
+//  - (si « lights » est fourni) ses lumieres et effets : poses sur lui (objet de 50 m3 au plus), meme regle que les sons.
 // Rien d'autre n'est touche. Les objets deja supprimes passes dans « dejaSupprimes » comptent comme supprimes.
 
 using System;
@@ -14,7 +15,7 @@ namespace NcweFr
     {
         const double HolderMaxVolume = 50;   // m3 : au-dela (sol, batiment, route…) un objet ne « porte » pas un son
 
-        static void FindAssociated(string client, List<string> ids, List<double[]> dejaSupprimes, List<string> cols, List<string> sounds)
+        static void FindAssociated(string client, List<string> ids, List<double[]> dejaSupprimes, List<string> cols, List<string> sounds, List<string> lights = null, HashSet<string> linkedOut = null)
         {
             var boxes = new List<double[]>();
             if (dejaSupprimes != null) boxes.AddRange(dejaSupprimes);
@@ -25,7 +26,7 @@ namespace NcweFr
             foreach (Dictionary<string, object> d in ObjectDetails(client, ids))
             {
                 double[] b = Box(d); if (b != null) boxes.Add(b);
-                foreach (string c in LinkedIds(d)) if (haveCols.Add(c)) cols.Add(c);
+                foreach (string c in LinkedIds(d)) { if (linkedOut != null) linkedOut.Add(c); if (haveCols.Add(c)) cols.Add(c); }
             }
             if (boxes.Count == 0) return;
 
@@ -38,15 +39,25 @@ namespace NcweFr
             // 3. collisions et sons poses sur ces boites
             var colCand = new List<KeyValuePair<string, double[]>>();
             var soundCand = new List<KeyValuePair<string, double[]>>();
-            foreach (Dictionary<string, object> d in Query(client, cx, cy, cz, radius, "\"collision\",\"sound\"", false))
+            var lightCand = new List<KeyValuePair<string, double[]>>();
+            var small = new List<double[]>();
+            foreach (double[] b in boxes) if ((b[3] - b[0]) * (b[4] - b[1]) * (b[5] - b[2]) <= HolderMaxVolume) small.Add(b);
+            string kinds = lights != null ? "\"collision\",\"sound\",\"light\",\"particle\",\"effect\"" : "\"collision\",\"sound\"";
+            foreach (Dictionary<string, object> d in Query(client, cx, cy, cz, radius, kinds, false))
             {
                 object ed; if (d.TryGetValue("editable", out ed) && ed is bool && !(bool)ed) continue;
                 string id = Str(d, "id"); double[] p = Vec(d, "position"); if (id == null || p == null) continue;
-                bool sound = Str(d, "kind") == "sound";
+                string kind = Str(d, "kind");
+                if (kind == "light" || kind == "particle" || kind == "effect")
+                {
+                    foreach (double[] b in small) if (InBox(p, b, 0.5, 0.5)) { lightCand.Add(new KeyValuePair<string, double[]>(id, p)); break; }
+                    continue;
+                }
+                bool sound = kind == "sound";
                 foreach (double[] b in boxes)
                     if (sound ? InBox(p, b, 0.3, 0.5) : InBox(p, b, 0.1, 0.2)) { (sound ? soundCand : colCand).Add(new KeyValuePair<string, double[]>(id, p)); break; }
             }
-            if (colCand.Count == 0 && soundCand.Count == 0) return;
+            if (colCand.Count == 0 && soundCand.Count == 0 && lightCand.Count == 0) return;
 
             // 4. objets qui restent autour : ils gardent leurs collisions et leurs sons
             var others = new List<KeyValuePair<string, double[]>>();
@@ -67,17 +78,24 @@ namespace NcweFr
                 foreach (var cd in colCand) if (!keep.Contains(cd.Key) && haveCols.Add(cd.Key)) cols.Add(cd.Key);
             }
 
-            var haveSounds = new HashSet<string>(sounds, StringComparer.Ordinal);
-            foreach (var sd in soundCand)
+            AddUnheld(soundCand, others, 0.3, sounds);
+            if (lights != null) AddUnheld(lightCand, others, 0.5, lights);
+        }
+
+        // garde les candidats qui ne sont pas aussi poses sur un autre objet (petit) qui reste
+        static void AddUnheld(List<KeyValuePair<string, double[]>> cand, List<KeyValuePair<string, double[]>> others, double margin, List<string> into)
+        {
+            var have = new HashSet<string>(into, StringComparer.Ordinal);
+            foreach (var sd in cand)
             {
                 bool held = false;
                 foreach (var ob in others)
                 {
                     double[] b = ob.Value;
                     if ((b[3] - b[0]) * (b[4] - b[1]) * (b[5] - b[2]) > HolderMaxVolume) continue;
-                    if (InBox(sd.Value, b, 0.3, 0.5)) { held = true; break; }
+                    if (InBox(sd.Value, b, margin, 0.5)) { held = true; break; }
                 }
-                if (!held && haveSounds.Add(sd.Key)) sounds.Add(sd.Key);
+                if (!held && have.Add(sd.Key)) into.Add(sd.Key);
             }
         }
 
@@ -127,19 +145,21 @@ namespace NcweFr
         }
 
         // Suppression unique (un Ctrl+Z) des objets et de ce qui leur est associe.
-        static Dictionary<string, object> DeleteWithAssociated(string client, List<string> ids, List<string> cols, List<string> sounds)
+        static Dictionary<string, object> DeleteWithAssociated(string client, List<string> ids, List<string> cols, List<string> sounds, List<string> lights = null)
         {
-            var all = new List<string>(ids); all.AddRange(cols); all.AddRange(sounds);
+            var all = new List<string>(ids); all.AddRange(cols); all.AddRange(sounds); if (lights != null) all.AddRange(lights);
+            var seen = new HashSet<string>(StringComparer.Ordinal); all.RemoveAll(delegate (string x) { return !seen.Add(x); });
             var sb = new StringBuilder("{\"op\":\"api.delete\",\"client\":" + Q(client) + ",\"ids\":[");
             for (int i = 0; i < all.Count; i++) { if (i > 0) sb.Append(','); sb.Append(Q(all[i])); }
             return Call(sb.Append("]}").ToString(), 120000);
         }
 
-        static string AssociatedText(List<string> cols, List<string> sounds)
+        static string AssociatedText(List<string> cols, List<string> sounds, List<string> lights = null)
         {
             var s = new StringBuilder();
             if (cols.Count > 0) s.Append(" + ").Append(cols.Count).Append(cols.Count > 1 ? " collisions" : " collision");
             if (sounds.Count > 0) s.Append(" + ").Append(sounds.Count).Append(sounds.Count > 1 ? " sons" : " son");
+            if (lights != null && lights.Count > 0) s.Append(" + ").Append(lights.Count).Append(lights.Count > 1 ? " lumières/effets" : " lumière/effet");
             return s.ToString();
         }
     }

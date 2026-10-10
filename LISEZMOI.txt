@@ -1,4 +1,4 @@
-﻿NCWE Studio - interface en francais
+NCWE Studio - interface en francais
 ====================================
 
 Utilisation
@@ -36,6 +36,12 @@ Panneau Sélection (Inspecteur, sous « Dupliquer en série »)
     Suppr.             supprimer ces objets          (2 clics pour confirmer, Ctrl+Z annule)
     Suppr. similaires  supprimer tous ceux du meme mesh dans le rayon (2 clics, Ctrl+Z annule)
   Seuls les objets charges autour de la camera sont trouves ; ceux en lecture seule sont ignores.
+  Objets sans mesh (lumieres, sons, collisions, particules) : similaires = meme type et meme nom sans
+  son numero (ex. tous les « {L_Point} », tous les sons « {em_fan_} »).
+  Case « Sélectionner aussi les liés » (cochée par défaut, mémorisée dans selection-lies.txt) : chaque
+  sélection prend aussi les collisions, sons, lumières et effets posés sur les objets choisis (500 objets
+  au plus). Les collisions déjà liées par NCWE (qui suivent le mesh) ne sont pas ajoutées.
+  Les suppressions du panneau enlèvent aussi les lumières/effets posés sur l'objet (aperçu en orange).
 
   Coches + "Supprimer les cochés" : plusieurs props supprimés ensemble (un seul Ctrl+Z).
   Cercles orange dans la vue 3D = rayon de recherche des similaires.
