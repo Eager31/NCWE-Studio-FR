@@ -1,0 +1,141 @@
+{
+    "origine":  [
+                    -1468,
+                    1248,
+                    39
+                ],
+    "nom":  "ncpd_lc_garage",
+    "etapes":  [
+                   {
+                       "nom":  "Garage haut (30 m)",
+                       "salle":  {
+                                     "sol":  "base\\environment\\architecture\\common\\int\\int_ent_industrial_a\\int_ent_industrial_a_floor_l300_a.mesh",
+                                     "lumieres":  12,
+                                     "hauteur":  4.3,
+                                     "plafond":  "base\\environment\\architecture\\common\\int\\int_common_a\\int_common_a_ceiling_tiles_a_l300_w300_a.mesh",
+                                     "centre":  [
+                                                    -12.6,
+                                                    -3.5,
+                                                    -9
+                                                ],
+                                     "i":  900,
+                                     "taille":  [
+                                                    36.5,
+                                                    25.7
+                                                ],
+                                     "k":  5500,
+                                     "inverser_murs":  true,
+                                     "portes":  [
+                                                    {
+                                                        "hauteur":  4,
+                                                        "decalage":  10.6,
+                                                        "largeur":  15,
+                                                        "mur":  "sud"
+                                                    }
+                                                ],
+                                     "mur":  "base\\environment\\architecture\\common\\int\\int_common_techpanel_a\\int_common_techpanel_a_wall_h400_l100_a.mesh"
+                                 },
+                       "id":  "garage30"
+                   },
+                   {
+                       "nom":  "Garage bas (23 m) : pompes, sally port, cellules",
+                       "salle":  {
+                                     "sol":  "base\\environment\\architecture\\common\\int\\int_ent_industrial_a\\int_ent_industrial_a_floor_l300_a.mesh",
+                                     "lumieres":  12,
+                                     "hauteur":  6.5,
+                                     "plafond":  "base\\environment\\architecture\\common\\int\\int_common_a\\int_common_a_ceiling_tiles_a_l300_w300_a.mesh",
+                                     "centre":  [
+                                                    -12.6,
+                                                    -3.5,
+                                                    -16
+                                                ],
+                                     "i":  1000,
+                                     "taille":  [
+                                                    36.5,
+                                                    25.7
+                                                ],
+                                     "k":  5500,
+                                     "inverser_murs":  true,
+                                     "portes":  [
+                                                    {
+                                                        "hauteur":  5.5,
+                                                        "decalage":  10.6,
+                                                        "largeur":  15,
+                                                        "mur":  "sud"
+                                                    }
+                                                ],
+                                     "mur":  "base\\environment\\architecture\\common\\int\\int_common_techpanel_a\\int_common_techpanel_a_wall_h400_l100_a.mesh"
+                                 },
+                       "id":  "garage23"
+                   },
+                   {
+                       "nom":  "Cellules (sally port)",
+                       "salle":  {
+                                     "sol":  "base\\environment\\architecture\\common\\int\\int_ent_industrial_a\\int_ent_industrial_a_floor_l300_a.mesh",
+                                     "lumieres":  3,
+                                     "hauteur":  3.6,
+                                     "plafond":  "base\\environment\\architecture\\common\\int\\int_common_a\\int_common_a_ceiling_tiles_a_l300_w300_a.mesh",
+                                     "centre":  [
+                                                    -25.2,
+                                                    4,
+                                                    -15.95
+                                                ],
+                                     "i":  600,
+                                     "taille":  [
+                                                    10.6,
+                                                    10.2
+                                                ],
+                                     "k":  4500,
+                                     "inverser_murs":  true,
+                                     "portes":  [
+                                                    {
+                                                        "hauteur":  2.6,
+                                                        "decalage":  0,
+                                                        "largeur":  1.6,
+                                                        "mur":  "est"
+                                                    }
+                                                ],
+                                     "mur":  "base\\environment\\architecture\\common\\int\\int_common_techpanel_a\\int_common_techpanel_a_wall_h400_l100_a.mesh"
+                                 },
+                       "id":  "cellules"
+                   },
+                   {
+                       "nom":  "Fouille et enregistrement",
+                       "salle":  {
+                                     "sol":  "base\\environment\\architecture\\common\\int\\int_ent_industrial_a\\int_ent_industrial_a_floor_l300_a.mesh",
+                                     "lumieres":  2,
+                                     "hauteur":  3.6,
+                                     "plafond":  "base\\environment\\architecture\\common\\int\\int_common_a\\int_common_a_ceiling_tiles_a_l300_w300_a.mesh",
+                                     "centre":  [
+                                                    -15.9,
+                                                    4,
+                                                    -15.95
+                                                ],
+                                     "i":  700,
+                                     "taille":  [
+                                                    7.4,
+                                                    10.2
+                                                ],
+                                     "k":  6000,
+                                     "inverser_murs":  true,
+                                     "portes":  [
+                                                    {
+                                                        "hauteur":  2.6,
+                                                        "decalage":  0,
+                                                        "largeur":  1.6,
+                                                        "mur":  "ouest"
+                                                    },
+                                                    {
+                                                        "hauteur":  2.8,
+                                                        "decalage":  0,
+                                                        "largeur":  2.4,
+                                                        "mur":  "sud"
+                                                    }
+                                                ],
+                                     "mur":  "base\\environment\\architecture\\common\\int\\int_common_techpanel_a\\int_common_techpanel_a_wall_h400_l100_a.mesh"
+                                 },
+                       "id":  "fouille"
+                   }
+               ],
+    "cap":  0
+}
