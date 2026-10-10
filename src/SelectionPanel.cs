@@ -65,11 +65,10 @@ namespace NcweFr
                 if (scans > 20) DumpTree(content);
                 if (radiusBox != null) radiusValue = (float)ReadRadius();
                 if (autoAlignBox != null) autoAlign = IsChecked(autoAlignBox);
-                if (withLinkedBox != null && IsChecked(withLinkedBox) != withLinked) SetWithLinked(IsChecked(withLinkedBox));
+                if (noFxBox != null && IsChecked(noFxBox) != noFx) SetNoFx(IsChecked(noFxBox));
                 if (poller == null)
                 {
                     skipNames.Add(PanelName);
-                    withLinked = ReadWithLinked();
                     Type handler = FindType("Microsoft.UI.Xaml.RoutedEventHandler");
                     clickDelegate = Delegate.CreateDelegate(handler, typeof(Plugin).GetMethod("OnPanelClick", BindingFlags.NonPublic | BindingFlags.Static));
                     poller = new Thread(PollLoop); poller.IsBackground = true; poller.Name = "ncwe-fr-selection"; poller.Start();
@@ -197,7 +196,7 @@ namespace NcweFr
             x.Append("<CheckBox x:Name='autoalign' Grid.Column='1' MinWidth='0' Content='Auto' IsChecked='" + (autoAlign ? "True" : "False") + "' ToolTipService.ToolTip='Auto-aligner : aligne l&apos;objet sur le sol ou le mur quand vous le lâchez après un déplacement'/>");
             x.Append("</Grid>");
             x.Append("<TextBlock FontSize='12' Opacity='0.6' TextWrapping='Wrap' Text='R pivoter · T déplacer · Maj pendant une rotation : libre'/>");
-            x.Append("<CheckBox x:Name='withlinked' MinWidth='0' Content='Sélectionner aussi les liés (collisions, sons, lumières, effets)' IsChecked='" + (withLinked ? "True" : "False") + "' ToolTipService.ToolTip='À chaque sélection, ajoute ce qui est posé sur les objets choisis : collisions, sons, lumières, particules. Ils partent aussi à la suppression.'/>");
+            x.Append("<CheckBox x:Name='nofx' MinWidth='0' Content='Sans lumières, sons ni effets' IsChecked='" + (noFx ? "True" : "False") + "' ToolTipService.ToolTip='Par défaut, chaque sélection prend aussi ce qui est posé sur les objets (collisions, sons, lumières, effets) et tout part à la suppression. Cochée : seulement les collisions. Décochée à chaque lancement.'/>");
 
             // rayon
             x.Append("<Grid ColumnSpacing='8'><Grid.ColumnDefinitions><ColumnDefinition Width='*'/><ColumnDefinition Width='Auto'/></Grid.ColumnDefinitions>");
@@ -257,7 +256,7 @@ namespace NcweFr
             Func<string, object> F = delegate (string n) { return find.Invoke(panel, new object[] { n }); };
             statusText = F("status"); radiusBox = F("radius"); summaryText = F("summary");
             confirmBar = F("confirmBar"); confirmText = F("confirmText");
-            autoAlignBox = F("autoalign"); withLinkedBox = F("withlinked");
+            autoAlignBox = F("autoalign"); noFxBox = F("nofx");
             checkBoxes.Clear();
             for (int i = 0; i < shown; i++) checkBoxes.Add(F("c_" + i));
             foreach (string n in new[] { "b_align", "b_chkall", "m_delchk", "m_delchksim", "b_confirm", "b_cancel" }) AttachClick(F(n), n);
@@ -483,6 +482,7 @@ namespace NcweFr
                     }
                     var cols = new List<string>(); var sounds = new List<string>(); var lights = new List<string>();
                     FindAssociated(Client, ids, null, cols, sounds, lights);
+                    if (noFx) { sounds.Clear(); lights.Clear(); }
                     var assoc = new List<string>(cols); assoc.AddRange(sounds); assoc.AddRange(lights);
                     assoc.RemoveAll(delegate (string a) { return set.Contains(a); });
                     if (gen != previewGen) return;
@@ -568,27 +568,22 @@ namespace NcweFr
             if (!Ok(r)) SetStatus("La sélection a échoué : " + Err(r));
         }
 
-        // ---------- « Sélectionner aussi les liés » ----------
+        // ---------- objets lies, toujours pris ----------
         // A chaque nouvelle selection : ajoute les collisions posees sur les objets, leurs sons, lumieres et effets.
         // Les collisions que NCWE lie deja a un mesh (elles le suivent) ne sont pas ajoutees : sinon un
         // deplacement les bougerait deux fois.
-        static object withLinkedBox;
-        static volatile bool withLinked = true;   // relu dans selection-lies.txt au demarrage
+        // Case « Sans lumières, sons ni effets » (besoin ponctuel, decochee a chaque lancement) :
+        // seules les collisions sont alors prises, a la selection comme a la suppression.
+        static object noFxBox;
+        static volatile bool noFx;
         static readonly HashSet<string> linkedDone = new HashSet<string>(StringComparer.Ordinal);
         const int LinkedMaxObjects = 500;
 
-        static bool ReadWithLinked()
+        static void SetNoFx(bool on)
         {
-            try { string f = Path.Combine(dir, "selection-lies.txt"); return !File.Exists(f) || File.ReadAllText(f).Trim() != "0"; }
-            catch { return true; }
-        }
-
-        static void SetWithLinked(bool on)
-        {
-            withLinked = on;
-            try { File.WriteAllText(Path.Combine(dir, "selection-lies.txt"), on ? "1" : "0"); } catch { }
+            noFx = on;
             lock (sync) linkedDone.Clear();
-            if (on) forcePoll = true;
+            if (!on) forcePoll = true;     // decochee : on rajoute les lumieres/sons/effets de la selection
         }
 
         static readonly HashSet<string> holderKinds = new HashSet<string> { "mesh", "instanced_mesh", "entity", "door", "decal" };
@@ -609,6 +604,7 @@ namespace NcweFr
             if (!PipeIsMine()) return;
             var cols = new List<string>(); var sounds = new List<string>(); var lights = new List<string>(); var followers = new HashSet<string>(StringComparer.Ordinal);
             FindAssociated(Client, todo, null, cols, sounds, lights, followers);
+            if (noFx) { sounds.Clear(); lights.Clear(); }
             var add = new List<string>();
             foreach (List<string> l in new[] { cols, sounds, lights })
                 foreach (string id in l) if (!followers.Contains(id) && inSel.Add(id)) add.Add(id);
@@ -628,6 +624,7 @@ namespace NcweFr
             // avec leurs collisions et leurs sons associes (sinon murs invisibles / sons fantomes)
             var cols = new List<string>(); var sounds = new List<string>(); var lights = new List<string>();
             FindAssociated(Client, ids, null, cols, sounds, lights);
+            if (noFx) { sounds.Clear(); lights.Clear(); }
             var r = DeleteWithAssociated(Client, ids, cols, sounds, lights);
             if (Ok(r))
             {
@@ -722,7 +719,7 @@ namespace NcweFr
                             {
                                 forcePoll = false;
                                 if (changed) { lastIds = ids; lastPositions.Clear(); movedIds.Clear(); }
-                                if (n >= 1) { LoadSelection(); if (withLinked) AddLinkedToSelection(); }
+                                if (n >= 1) { LoadSelection(); AddLinkedToSelection(); }
                                 else lock (sync) { selCount = 0; groups = new List<Group>(); currentItems = new List<Item>(); selSignature = ""; dataVersion++; }
                             }
                             if (track) { List<Item> cur; lock (sync) cur = currentItems; CheckAutoAlign(cur); }
