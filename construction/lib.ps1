@@ -274,6 +274,110 @@ function Tremie($G, [string]$Motif = 'int_ent_industrial_a_floor|int_common_a_ce
     if ($add.Count) { Ncwe 'add_collision' @{ items = $add } | Out-Null }
     return ("trémie : {0} modules retirés, {1} collisions découpées en {2}" -f $m.Count, $del.Count, $add.Count)
 }
+# ---------------- construction depuis les tracés (outil 📐 : traces.tsv) ----------------
+# Lit les lignes tracées dans NCWE et pose tout en une étape :
+#   mur : modules de mur, bonne face vers -Interieur ; fenêtre ouverte : même mur retourné (on voit dehors depuis l'intérieur)
+#   fenêtre fermée : vitre ; porte : ouverture dans les murs qu'elle croise ; sol / plafond : dalles dans le contour fermé
+#   Construire-Traces -Interieur @(x,y,z) [-Noms 'hall*'] [-Verifier]   (-Verifier : dessin seul, rien n'est posé)
+$script:TraceMur = 'base\environment\architecture\common\int\int_common_techpanel_a\int_common_techpanel_a_wall_h400_l100_a.mesh'   # 1,04 x 0,25 x 3,8, pivot bout +X, face visible +Y
+$script:TraceVitre = 'base\environment\architecture\common\int\int_common_a\int_common_a_wall_glass_l300_w380_a.mesh'
+$script:TraceSol = 'base\environment\architecture\common\int\int_ent_industrial_a\int_ent_industrial_a_floor_l300_a.mesh'                 # 3 x 3 x 0,2, pivot coin max, dessus à z pivot
+$script:TraceSolPetit = 'base\environment\architecture\common\int\int_ent_industrial_a\int_ent_industrial_a_floor_l100_a.mesh'
+$script:TracePlafond = 'base\environment\architecture\common\int\int_common_a\int_common_a_ceiling_tiles_a_l300_w300_a.mesh'
+
+function Lire-Traces([string]$Fichier) {
+    if (-not $Fichier) { $Fichier = Join-Path (Split-Path $Racine -Parent) 'traces.tsv' }
+    if (-not (Test-Path $Fichier)) { throw "Aucun tracé : $Fichier (outil 📐 dans NCWE)." }
+    $res = @()
+    foreach ($l in [IO.File]::ReadAllLines($Fichier, [Text.Encoding]::UTF8)) {
+        if ($l.Length -eq 0 -or $l[0] -eq '#') { continue }
+        $c = $l.Split("`t"); if ($c.Count -lt 4) { continue }
+        $pts = @($c[3].Split('|') | ForEach-Object { , @($_.Split(';') | ForEach-Object { P $_ }) })
+        $res += [pscustomobject]@{ Nom = $c[0]; Type = $c[1]; Hauteur = (P $c[2]); Points = $pts }
+    }
+    return $res
+}
+
+function DansPolygone([double]$x, [double]$y, $pts) {
+    $in = $false; $n = $pts.Count
+    for ($i = 0; $i -lt $n; $i++) { $a = $pts[$i]; $b = $pts[($i + 1) % $n]
+        if ((($a[1] -gt $y) -ne ($b[1] -gt $y)) -and ($x -lt ($b[0] - $a[0]) * ($y - $a[1]) / ($b[1] - $a[1]) + $a[0])) { $in = -not $in } }
+    return $in
+}
+
+function DistSegment($p, $a, $b) {
+    $dx = $b[0] - $a[0]; $dy = $b[1] - $a[1]; $l2 = $dx * $dx + $dy * $dy
+    $t = if ($l2 -gt 0) { [Math]::Max(0, [Math]::Min(1, (($p[0] - $a[0]) * $dx + ($p[1] - $a[1]) * $dy) / $l2)) } else { 0 }
+    return [Math]::Sqrt([Math]::Pow($p[0] - ($a[0] + $t * $dx), 2) + [Math]::Pow($p[1] - ($a[1] + $t * $dy), 2))
+}
+
+function Construire-Traces($Interieur, [string]$Noms = '*', [switch]$Verifier, [string]$Fichier) {
+    $tr = @(Lire-Traces $Fichier | Where-Object { $_.Nom -like $Noms })
+    $portes = @($tr | Where-Object { $_.Type -eq 'porte' })
+    $items = New-Object Collections.Generic.List[object]; $cols = New-Object Collections.Generic.List[object]; $ann = New-Object Collections.Generic.List[object]
+    foreach ($l in $tr) {
+        $H = $l.Hauteur
+        switch -Regex ($l.Type) {
+            '^(mur|fenêtre ouverte|fenêtre fermée)$' {
+                $vitre = $l.Type -eq 'fenêtre fermée'; $ouverte = $l.Type -eq 'fenêtre ouverte'
+                for ($s = 0; $s -lt $l.Points.Count - 1; $s++) {
+                    $A = $l.Points[$s]; $B = $l.Points[$s + 1]
+                    $dx = $B[0] - $A[0]; $dy = $B[1] - $A[1]; $long = [Math]::Sqrt($dx * $dx + $dy * $dy); if ($long -lt 0.05) { continue }
+                    $ux = $dx / $long; $uy = $dy / $long
+                    # face visible (+Y local = gauche du sens de tracé) vers l'intérieur ; retournée pour une fenêtre ouverte
+                    $mx = ($A[0] + $B[0]) / 2; $my = ($A[1] + $B[1]) / 2
+                    $gauche = (-$uy) * ($Interieur[0] - $mx) + $ux * ($Interieur[1] - $my) -gt 0
+                    if ($gauche -eq $ouverte) { $tmpA = $A; $A = $B; $B = $tmpA; $ux = -$ux; $uy = -$uy }
+                    $yaw = [Math]::Round([Math]::Atan2($uy, $ux) * 180 / [Math]::PI, 2)
+                    $mod = if ($vitre) { 3.0 } else { 1.04 }; $n = [Math]::Max(1, [int][Math]::Ceiling($long / ($(if ($vitre) { 3.0 } else { 1.0 }))))
+                    $len = $long / $n; $z0 = [Math]::Min($A[2], $B[2])
+                    for ($k = 0; $k -lt $n; $k++) {
+                        $cx = $A[0] + $ux * ($k + 0.5) * $len; $cy = $A[1] + $uy * ($k + 0.5) * $len
+                        $dansPorte = $false; foreach ($pt in $portes) { for ($q = 0; $q -lt $pt.Points.Count - 1; $q++) { if ((DistSegment @($cx, $cy) $pt.Points[$q] $pt.Points[$q + 1]) -lt 0.35) { $dansPorte = $true } } }
+                        if ($dansPorte) { continue }
+                        if ($vitre) {
+                            $px = $A[0] + $ux * ($k + 1) * $len; $py = $A[1] + $uy * ($k + 1) * $len
+                            $items.Add(@{ asset = $script:TraceVitre; position = @($px, $py, $z0); rotation = @{ yaw = $yaw; pitch = 0; roll = 0 }; scale = @(($len / 3.0), 1, ($H / 3.8)); ground = 'none'; name = "trace $($l.Nom)" })
+                        } else {
+                            $px = $A[0] + $ux * ($k + 1) * $len; $py = $A[1] + $uy * ($k + 1) * $len      # pivot au bout +X du module
+                            $items.Add(@{ asset = $script:TraceMur; position = @($px, $py, $z0); rotation = @{ yaw = $yaw; pitch = 0; roll = 0 }; scale = @(($len / $mod), 1, ($H / 3.8)); ground = 'none'; name = "trace $($l.Nom)" })
+                        }
+                        $cols.Add(@{ name = "trace $($l.Nom)"; position = @($cx, $cy, ($z0 + $H / 2)); rotation = @{ yaw = $yaw; pitch = 0; roll = 0 }; shapes = @(@{ kind = 'box'; size = @($len, 0.25, $H) }) })
+                    }
+                    $ann.Add(@{ type = 'line'; color = $(if ($ouverte) { 'lime' } elseif ($vitre) { 'green' } else { 'cyan' }); points = @(@($A[0], $A[1], ($z0 + 0.2)), @($B[0], $B[1], ($z0 + 0.2))) })
+                }
+            }
+            '^(sol|plafond)$' {
+                $pts = $l.Points; $z = ($pts | ForEach-Object { $_[2] } | Measure-Object -Average).Average
+                if ($l.Type -eq 'plafond') { $z += $H }
+                $xs = $pts | ForEach-Object { $_[0] }; $ys = $pts | ForEach-Object { $_[1] }
+                $x0 = ($xs | Measure-Object -Minimum).Minimum; $x1 = ($xs | Measure-Object -Maximum).Maximum; $y0 = ($ys | Measure-Object -Minimum).Minimum; $y1 = ($ys | Measure-Object -Maximum).Maximum
+                for ($gx = $x0; $gx -lt $x1; $gx += 3) { for ($gy = $y0; $gy -lt $y1; $gy += 3) {
+                    $coins = @(@($gx, $gy), @(($gx + 3), $gy), @($gx, ($gy + 3)), @(($gx + 3), ($gy + 3)))
+                    $tous = @($coins | Where-Object { DansPolygone $_[0] $_[1] $pts }).Count -eq 4
+                    if ($tous) { $cases = @(, @($gx, $gy, 3.0)) } else { $cases = @(); for ($i = 0; $i -lt 3; $i++) { for ($j = 0; $j -lt 3; $j++) { $cx = $gx + $i + 0.5; $cy = $gy + $j + 0.5; if ($cx -lt $x1 -and $cy -lt $y1 -and (DansPolygone $cx $cy $pts)) { $cases += , @(($gx + $i), ($gy + $j), 1.0) } } } }
+                    foreach ($cs in $cases) {
+                        $taille = $cs[2]; $asset = if ($l.Type -eq 'plafond') { $script:TracePlafond } elseif ($taille -eq 3) { $script:TraceSol } else { $script:TraceSolPetit }
+                        if ($l.Type -eq 'plafond') {
+                            $items.Add(@{ asset = $asset; position = @(($cs[0] + $taille / 2), ($cs[1] + $taille / 2), $z); rotation = @{ yaw = 0; pitch = 0; roll = 180 }; scale = @(($taille / 3), ($taille / 3), 1); ground = 'none'; name = "trace $($l.Nom)" })
+                        } else {
+                            $items.Add(@{ asset = $asset; position = @(($cs[0] + $taille), ($cs[1] + $taille), $z); rotation = @{ yaw = 0; pitch = 0; roll = 0 }; ground = 'none'; name = "trace $($l.Nom)" })
+                            $cols.Add(@{ name = "trace $($l.Nom)"; position = @(($cs[0] + $taille / 2), ($cs[1] + $taille / 2), ($z - 0.1)); shapes = @(@{ kind = 'box'; size = @($taille, $taille, 0.2) }) })
+                        }
+                    } } }
+                $ann.Add(@{ type = 'line'; closed = $true; color = $(if ($l.Type -eq 'sol') { 'white' } else { 'yellow' }); points = @($pts | ForEach-Object { , @($_[0], $_[1], ($z + 0.1)) }) })
+            }
+        }
+    }
+    if ($Verifier) { Ncwe 'annotate' @{ items = $ann.ToArray(); duration = 600; clear = $true } | Out-Null; return ("tracés : {0} lignes -> {1} objets, {2} collisions (dessin seul)" -f $tr.Count, $items.Count, $cols.Count) }
+    $poses = 0
+    for ($i = 0; $i -lt $items.Count; $i += 400) {
+        $pa = @{ items = @($items.GetRange($i, [Math]::Min(400, $items.Count - $i))) }
+        if ($i -eq 0 -and $cols.Count) { $pa.collisions = $cols.ToArray() }
+        $r = Ncwe 'place_objects' $pa; $poses += @($r.ids).Count
+    }
+    return ("tracés : {0} lignes -> {1} objets posés, {2} collisions" -f $tr.Count, $poses, $cols.Count)
+}
 # ---------------- familles ----------------
 $script:Familles = @(
     @('Sol', '\\floor|_floor|\\sol|tatami|carpet|rug'),
