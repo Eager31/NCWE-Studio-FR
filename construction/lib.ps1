@@ -241,6 +241,39 @@ function Maillage-Faces([string]$Id, [int]$Limite = 5000) {
         if ($b.id -and $b.id -ne $Id) { Ncwe 'undo' @{} | Out-Null }
     }
 }
+# Trémie : retire, dans une boîte monde {x0,x1,y0,y1,z0,z1}, ses propres dalles de sol / plafond (centre dedans)
+# et découpe les boîtes de collision du projet autour (ascenseurs, escaliers). Deux étapes d'annulation.
+function Tremie($G, [string]$Motif = 'int_ent_industrial_a_floor|int_common_a_ceiling_tiles|int_common_techpanel_a_wall') {
+    $q = Ncwe-Api 'api.query' @{ min = @($G.x0, $G.y0, $G.z0); max = @($G.x1, $G.y1, $G.z1); source = 'project'; kinds = @('mesh'); limit = 2000; show = $false }
+    $m = @($q.objects | Where-Object { $_.asset -match $Motif -and $_.bounds } | Where-Object {
+        $cx = ($_.bounds.min[0] + $_.bounds.max[0]) / 2; $cy = ($_.bounds.min[1] + $_.bounds.max[1]) / 2; $cz = ($_.bounds.min[2] + $_.bounds.max[2]) / 2
+        $cx -gt $G.x0 -and $cx -lt $G.x1 -and $cy -gt $G.y0 -and $cy -lt $G.y1 -and $cz -gt $G.z0 -and $cz -lt $G.z1 })
+    $cx = ($G.x0 + $G.x1) / 2; $cy = ($G.y0 + $G.y1) / 2; $cz = ($G.z0 + $G.z1) / 2
+    $qc = Ncwe-Api 'api.query' @{ center = @($cx, $cy, $cz); radius = 60; source = 'project'; kinds = @('collision'); limit = 2000; show = $false }
+    $ids = @($qc.objects | Where-Object { $_.name -match 'collision$' } | ForEach-Object { $_.id })
+    $det = @(); for ($i = 0; $i -lt $ids.Count; $i += 200) { $det += (Ncwe-Api 'api.object' @{ ids = $ids[$i..([Math]::Min($i + 199, $ids.Count - 1))] }).objects }
+    $del = @(); $add = @()
+    foreach ($o in $det) {
+        if (@($o.shapes).Count -ne 1 -or $o.shapes[0].kind -ne 'box' -or [Math]::Abs([double]$o.rotation.yaw) -gt 0.5) { continue }
+        $s = $o.shapes[0].size; $p = $o.position
+        $bx0 = $p[0] - $s[0] / 2; $bx1 = $p[0] + $s[0] / 2; $by0 = $p[1] - $s[1] / 2; $by1 = $p[1] + $s[1] / 2; $bz0 = $p[2] - $s[2] / 2; $bz1 = $p[2] + $s[2] / 2
+        if ($bx1 -le $G.x0 -or $bx0 -ge $G.x1 -or $by1 -le $G.y0 -or $by0 -ge $G.y1 -or $bz1 -le $G.z0 -or $bz0 -ge $G.z1) { continue }
+        $del += $o.id; $parts = @()
+        if ($bx0 -lt $G.x0) { $parts += , @($bx0, $G.x0, $by0, $by1) }
+        if ($bx1 -gt $G.x1) { $parts += , @($G.x1, $bx1, $by0, $by1) }
+        $ix0 = [Math]::Max($bx0, $G.x0); $ix1 = [Math]::Min($bx1, $G.x1)
+        if ($by0 -lt $G.y0) { $parts += , @($ix0, $ix1, $by0, $G.y0) }
+        if ($by1 -gt $G.y1) { $parts += , @($ix0, $ix1, $G.y1, $by1) }
+        foreach ($pp in $parts) {
+            $w = $pp[1] - $pp[0]; $dd = $pp[3] - $pp[2]; if ($w -lt 0.05 -or $dd -lt 0.05) { continue }
+            $add += @{ name = $o.name; position = @((($pp[0] + $pp[1]) / 2), (($pp[2] + $pp[3]) / 2), $p[2]); shapes = @(@{ kind = 'box'; size = @($w, $dd, $s[2]); preset = $o.shapes[0].preset; material = $o.shapes[0].material }) }
+        }
+    }
+    $tous = @($m | ForEach-Object { $_.id }) + $del
+    if ($tous.Count) { Ncwe-Api 'api.delete' @{ ids = $tous } | Out-Null }
+    if ($add.Count) { Ncwe 'add_collision' @{ items = $add } | Out-Null }
+    return ("trémie : {0} modules retirés, {1} collisions découpées en {2}" -f $m.Count, $del.Count, $add.Count)
+}
 # ---------------- familles ----------------
 $script:Familles = @(
     @('Sol', '\\floor|_floor|\\sol|tatami|carpet|rug'),
