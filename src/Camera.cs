@@ -1,4 +1,4 @@
-// Camera du NCWE ou tourne le plugin (sans passer par le canal \\.\pipe\ncwe-studio, partage par toutes les
+﻿// Camera du NCWE ou tourne le plugin (sans passer par le canal \\.\pipe\ncwe-studio, partage par toutes les
 // fenetres NCWE ouvertes : avec deux NCWE, une teleportation partait dans l'autre fenetre).
 //   - CameraGame / SetCameraGame : position, cap et inclinaison (memes unites que l'outil camera de NCWE)
 //   - PipeIsMine : le NCWE qui repond sur le canal est-il bien le notre ? (garde-fou avant de supprimer)
@@ -82,7 +82,7 @@ namespace NcweFr
         static bool NativeShortcuts()
         {
             if (nativeShortcuts.HasValue) return nativeShortcuts.Value;
-            Type st = FindType("NCWE.Studio.StudioSettings");
+            Type st = FindType("NCWE.Studio.Session.StudioSettings") ?? FindType("NCWE.Studio.StudioSettings");
             nativeShortcuts = st != null && st.GetField("DefaultShortcuts", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static) != null;
             return nativeShortcuts.Value;
         }
