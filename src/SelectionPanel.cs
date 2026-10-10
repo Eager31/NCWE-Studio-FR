@@ -644,6 +644,9 @@ namespace NcweFr
             return s.Length > 0 ? s : name.Trim();
         }
 
+        // les copies du projet n'ont pas de type de noeud : on ne compare que si les deux en ont un
+        static bool SameNode(string a, string b) { return string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b) || a == b; }
+
         static string KindLabel(string kind)
         {
             switch (kind)
@@ -687,7 +690,7 @@ namespace NcweFr
                 var d = o as Dictionary<string, object>;
                 if (d == null) continue;
                 if (byAsset ? !string.Equals(Str(d, "asset"), g.Asset, StringComparison.OrdinalIgnoreCase)
-                    : Str(d, "kind") != g.Kind || Str(d, "node") != g.Node || !string.Equals(NameStem(Str(d, "name")), g.Stem, StringComparison.OrdinalIgnoreCase)) continue;
+                    : Str(d, "kind") != g.Kind || !SameNode(Str(d, "node"), g.Node) || !string.Equals(NameStem(Str(d, "name")), g.Stem, StringComparison.OrdinalIgnoreCase)) continue;
                 object ed; if (d.TryGetValue("editable", out ed) && ed is bool && !(bool)ed) continue;
                 res.Add(Str(d, "id"));
             }
@@ -765,7 +768,7 @@ namespace NcweFr
                 }
                 // sans mesh (lumiere, son, collision…) : meme type + meme nom sans son numero
                 string stem = NameStem(it.Name);
-                string key = !string.IsNullOrEmpty(it.Asset) ? it.Asset.ToLowerInvariant() : "kind:" + it.Kind + "|" + it.Node + "|" + stem.ToLowerInvariant();
+                string key = !string.IsNullOrEmpty(it.Asset) ? it.Asset.ToLowerInvariant() : "kind:" + it.Kind + "|" + stem.ToLowerInvariant();
                 Group g;
                 if (!byKey.TryGetValue(key, out g))
                 {
