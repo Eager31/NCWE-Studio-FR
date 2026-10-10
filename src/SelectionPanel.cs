@@ -78,6 +78,8 @@ namespace NcweFr
                 PlacesUiTick();
                 CleanTick(window, content);
                 EffectsTick(window);
+                object lib = WinField(window, "_library");          // fenetre Bibliotheque (ouverte a la demande)
+                if (lib != null && !windows.Contains(lib)) { windows.Add(lib); Log("fenetre trouvee : " + lib.GetType().FullName); }
                 if (hostSection == null && popup == null) return;
 
                 int ver, sv; int count;

@@ -21,7 +21,7 @@ namespace NcweFr
             new[] { "Étincelles", "spark", "welding" },
             new[] { "Électricité", "electric", "elec", "short_circuit", "shortcircuit", "lightning" },
             new[] { "Poussière", "dust", "sand" },
-            new[] { "Eau et pluie", "water", "rain", "drip", "splash", "puddle", "leak", "fountain" },
+            new[] { "Eau et pluie", "water", "_rain", "rain_", "\\rain", "drip", "splash", "puddle", "leak", "fountain" },
             new[] { "Météo, brume, nuages", "weather", "cloud", "fog", "mist", "haze" },
             new[] { "Hologrammes", "holo" },
             new[] { "Lumières, néons, halos", "lights_env", "neon", "flare", "glow", "light", "lamp" },
@@ -140,7 +140,7 @@ namespace NcweFr
             int n = 0;
             foreach (object it in items)
             {
-                string info = SoundInfo(SoundEventOf(it));
+                string info = SoundInfoOf(it);
                 if (info != null) n++;
                 list.Add(Enrich(it, info));
             }

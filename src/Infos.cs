@@ -131,11 +131,26 @@ namespace NcweFr
             return copy;
         }
 
-        static string SoundEventOf(object item)
+        // nom d'evenement d'un emetteur du jeu : « {amb_bl_g_airvents_small} » ou « {amb_EM_fridge_}01 », dans le nom ou le detail
+        static readonly Dictionary<string, string> soundByEmitter = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        static string SoundInfoOf(object item)
         {
-            object tpl = XGetProp(item, "Template");
-            object audio = XGetProp(XGetProp(tpl, "Element"), "Audio");
-            return XGetProp(audio, "Sound") as string;
-        }
-    }
+            string s = (XGetProp(item, "Name") as string ?? "") + " " + (XGetProp(item, "Detail") as string ?? "");
+            int a = s.IndexOf('{'), b = a >= 0 ? s.IndexOf('}', a) : -1;
+            if (a < 0 || b <= a + 1) return null;
+            string stem = s.Substring(a + 1, b - a - 1).ToLowerInvariant();
+            string res;
+            if (soundByEmitter.TryGetValue(stem, out res)) return res;
+            res = SoundInfo(stem);
+            if (res == null)
+            {
+                // sinon : evenements qui commencent par ce nom ; boucle si tous bouclent
+                int n = 0, loops = 0; string first = null;
+                foreach (var kv in infoSounds)
+                    if (kv.Key.StartsWith(stem, StringComparison.OrdinalIgnoreCase)) { n++; if (kv.Value.StartsWith("∞")) loops++; if (first == null) first = kv.Value; }
+                if (n > 0) res = loops == n ? first : (loops == 0 ? first : "boucle ou ponctuel (" + loops + "/" + n + " en boucle)");
+            }
+            soundByEmitter[stem] = res;
+            return res;
+        }    }
 }
