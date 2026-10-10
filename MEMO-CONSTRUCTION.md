@@ -59,3 +59,10 @@
 - Mesurer avant : carte des hauteurs par rayons (dalles existantes, rampes), hauteur sous toit, et position exacte des ouvertures (rayons horizontaux).
 - Ne jamais ouvrir l'édition de maillage (`api.meshedit.begin`) sur les objets juste pour lire : chaque ouverture ajoute une étape « Edit mesh » dans l'historique. Le détrompeur lit l'orientation par rayon (normale).
 - Annuler plusieurs étapes à soi : lire `api.status.project.undo` avant chaque `undo`. Pour défaire beaucoup d'objets, une seule suppression ciblée (`api.delete` de ses propres ids) est bien plus rapide que 100 annulations.
+## Leçons du 11/10 (tracés, doublage, beta 7)
+- **PowerShell ignore la casse des variables** : `$L`/`$l`, `$H`/`$h`, `$T`/`$t` sont LA MÊME variable. Deux bugs en un jour. Noms longs et distincts (`$long`, `$rayon`, `$hauteur`) ; après écriture d'une fonction, chercher les variables qui ne diffèrent que par la casse.
+- **Option « Faces comme en jeu (dos masqués) »** de NCWE : selon qu'elle est cochée ou non, la vue montre ou cache le dos des murs. Avant de juger une capture, savoir dans quel mode on est ; en jeu, les dos sont masqués.
+- **Les maquettes lointaines (ProxyMesh)** faussent rayons et hauteurs (fausses dalles à 30/31/39 m, faux murs). Toujours les ignorer (`ignore` des rayons, en boucle jusqu'à ne plus en toucher). Ne jamais conclure « il y a un sol » sans vérifier que ce n'est pas un proxy.
+- **Tracés de l'utilisateur** : approximatifs et souvent verticaux (coins bas puis haut). Les traiter comme un guide : ligne au sol = plus longue suite de points bas, hauteur = du plus bas au plus haut, ignorer les points aberrants ; puis **caler sur le mur réel par rayons** (plusieurs hauteurs, lissage avec les voisins) et poser le doublage à 5 cm de la face intérieure.
+- **Murs du jeu épais** (1 à 2 m) : un décalage fixe met le doublage DANS le mur. Mesurer.
+- Vérifier chaque construction par rayons depuis l'intérieur (bonne face / mur nu) avant de dire que c'est fini.

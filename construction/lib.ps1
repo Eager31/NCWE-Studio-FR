@@ -311,43 +311,77 @@ function DistSegment($p, $a, $b) {
     return [Math]::Sqrt([Math]::Pow($p[0] - ($a[0] + $t * $dx), 2) + [Math]::Pow($p[1] - ($a[1] + $t * $dy), 2))
 }
 
-function Construire-Traces($Interieur, [string]$Noms = '*', [switch]$Verifier, [string]$Fichier) {
-    $tr = @(Lire-Traces $Fichier | Where-Object { $_.Nom -like $Noms })
-    $portes = @($tr | Where-Object { $_.Type -eq 'porte' })
+$script:IgnorerRayons = @('s:42e0e66c0ea8c203:669:669:-1')
+function Construire-Traces($Interieur, [string]$Noms = '*', [switch]$Verifier, [string]$Fichier, [string[]]$Types = @('mur', 'sol', 'plafond', 'fenêtre ouverte', 'fenêtre fermée'), [string[]]$SansNoms = @(), [double]$Decalage = 0.35) {
+    $tous = @(Lire-Traces $Fichier)
+    $portes = @($tous | Where-Object { $_.Type -eq 'porte' })
+    $contours = @($tous | Where-Object { $_.Type -in 'sol', 'plafond' } | ForEach-Object { , $_.Points })
+    $tr = @($tous | Where-Object { $_.Nom -like $Noms -and $_.Type -in $Types -and $SansNoms -notcontains $_.Nom })
     $items = New-Object Collections.Generic.List[object]; $cols = New-Object Collections.Generic.List[object]; $ann = New-Object Collections.Generic.List[object]
     foreach ($l in $tr) {
         $H = $l.Hauteur
         switch -Regex ($l.Type) {
             '^(mur|fenêtre ouverte|fenêtre fermée)$' {
                 $vitre = $l.Type -eq 'fenêtre fermée'; $ouverte = $l.Type -eq 'fenêtre ouverte'
-                for ($s = 0; $s -lt $l.Points.Count - 1; $s++) {
-                    $A = $l.Points[$s]; $B = $l.Points[$s + 1]
-                    $dx = $B[0] - $A[0]; $dy = $B[1] - $A[1]; $long = [Math]::Sqrt($dx * $dx + $dy * $dy); if ($long -lt 0.05) { continue }
+                # tracé vertical (coins du bas puis du haut) : ligne au sol = points du bas, hauteur = du bas au haut
+                $zs = @($l.Points | ForEach-Object { $_[2] }); $zmin = ($zs | Measure-Object -Minimum).Minimum; $zmax = ($zs | Measure-Object -Maximum).Maximum
+                if ($zmax - $zmin -gt 2) {
+                    $suites = @(); $cur = @(); foreach ($pp in $l.Points) { if ($pp[2] -le $zmin + 1.2) { $cur += , $pp } else { if ($cur.Count) { $suites += , $cur }; $cur = @() } }; if ($cur.Count) { $suites += , $cur }
+                    $pied = @(); $bl = -1; foreach ($su in $suites) { $lg = 0; for ($i = 1; $i -lt $su.Count; $i++) { $lg += [Math]::Sqrt([Math]::Pow($su[$i][0] - $su[$i - 1][0], 2) + [Math]::Pow($su[$i][1] - $su[$i - 1][1], 2)) }; if ($lg -gt $bl) { $bl = $lg; $pied = $su } }
+                    $base = $zmin; $H = $zmax - $zmin } else { $pied = $l.Points; $base = $null }
+                for ($s = 0; $s -lt $pied.Count - 1; $s++) {
+                    $A = $pied[$s]; $B = $pied[$s + 1]
+                    $dx = $B[0] - $A[0]; $dy = $B[1] - $A[1]; $long = [Math]::Sqrt($dx * $dx + $dy * $dy); if ($long -lt 0.3) { continue }
                     $ux = $dx / $long; $uy = $dy / $long
-                    # face visible (+Y local = gauche du sens de tracé) vers l'intérieur ; retournée pour une fenêtre ouverte
                     $mx = ($A[0] + $B[0]) / 2; $my = ($A[1] + $B[1]) / 2
-                    $gauche = (-$uy) * ($Interieur[0] - $mx) + $ux * ($Interieur[1] - $my) -gt 0
+                    # côté intérieur : dans un contour de sol/plafond tracé, sinon vers -Interieur
+                    $gx = $mx - $uy * 0.8; $gy = $my + $ux * 0.8; $dxx = $mx + $uy * 0.8; $dyy = $my - $ux * 0.8
+                    $inG = $false; $inD = $false; foreach ($pg in $contours) { if (DansPolygone $gx $gy $pg) { $inG = $true }; if (DansPolygone $dxx $dyy $pg) { $inD = $true } }
+                    if ($inG -eq $inD) { $gx = $mx - $uy * 4; $gy = $my + $ux * 4; $dxx = $mx + $uy * 4; $dyy = $my - $ux * 4; $inG = $false; $inD = $false; foreach ($pg in $contours) { if (DansPolygone $gx $gy $pg) { $inG = $true }; if (DansPolygone $dxx $dyy $pg) { $inD = $true } } }
+                    if ($inG -eq $inD) {
+                        # sinon : vers le centre du contour le plus proche
+                        $best = $null; $bd = 1e9; foreach ($pg in $contours) { $cxp = ($pg | ForEach-Object { $_[0] } | Measure-Object -Average).Average; $cyp = ($pg | ForEach-Object { $_[1] } | Measure-Object -Average).Average; $dd = [Math]::Pow($cxp - $mx, 2) + [Math]::Pow($cyp - $my, 2); if ($dd -lt $bd) { $bd = $dd; $best = @($cxp, $cyp) } }
+                        if ($Interieur) { $best = $Interieur }
+                        $inG = if ($best) { (-$uy) * ($best[0] - $mx) + $ux * ($best[1] - $my) -gt 0 } else { $true }; $inD = -not $inG
+                    }
+                    $gauche = $inG
                     if ($gauche -eq $ouverte) { $tmpA = $A; $A = $B; $B = $tmpA; $ux = -$ux; $uy = -$uy }
-                    $yaw = [Math]::Round([Math]::Atan2($uy, $ux) * 180 / [Math]::PI, 2)
-                    $mod = if ($vitre) { 3.0 } else { 1.04 }; $n = [Math]::Max(1, [int][Math]::Ceiling($long / ($(if ($vitre) { 3.0 } else { 1.0 }))))
-                    $len = $long / $n; $z0 = [Math]::Min($A[2], $B[2])
+                    # doublage décalé vers l'intérieur (pas collé au mur tracé)
+                    $nxi = - $uy; $nyi = $ux; if ($ouverte) { $nxi = -$nxi; $nyi = -$nyi }                    $yaw = [Math]::Round([Math]::Atan2($uy, $ux) * 180 / [Math]::PI, 2)
+                    $n = [Math]::Max(1, [int][Math]::Ceiling($long / ($(if ($vitre) { 3.0 } else { 1.0 })))); $len = $long / $n
+                    $z0 = if ($null -ne $base) { $base } else { [Math]::Min($A[2], $B[2]) }
+                    # décalage de chaque module : face intérieure réelle du mur, mesurée à 4 hauteurs, lissée avec les voisins
+                    $decs = @(); for ($k = 0; $k -lt $n; $k++) { $decs += $Decalage }
+                    if (-not $Verifier -and -not $ouverte) {
+                        $rays = @(); foreach ($k in 0..($n - 1)) { $qx = $A[0] + $ux * ($k + 0.5) * $len; $qy = $A[1] + $uy * ($k + 0.5) * $len
+                            foreach ($fz in 0.08, 0.35, 0.65, 0.92) { $rays += @{ origin = @(($qx + $nxi * 6), ($qy + $nyi * 6), ($z0 + $H * $fz)); direction = @(-$nxi, -$nyi, 0); max_distance = 8 } } }
+                        $res = @(); for ($i = 0; $i -lt $rays.Count; $i += 400) { $res += (Ncwe 'raycast' @{ rays = @($rays[$i..([Math]::Min($i + 399, $rays.Count - 1))]); show = $false; normal = $false; ignore = $script:IgnorerRayons }).results }
+                        $brut = @(); for ($k = 0; $k -lt $n; $k++) { $m = $null; for ($j = 0; $j -lt 4; $j++) { $rayon = $res[$k * 4 + $j]; if ($rayon.hit -and $rayon.distance -gt 0.5) { $v = 6 - [double]$rayon.distance; if ($null -eq $m -or $v -gt $m) { $m = $v } } }; $brut += $(if ($null -ne $m) { $m } else { [double]::NaN }) }
+                        for ($k = 0; $k -lt $n; $k++) { $vals = @(); foreach ($j in ($k - 1)..($k + 1)) { if ($j -ge 0 -and $j -lt $n -and -not [double]::IsNaN($brut[$j])) { $vals += $brut[$j] } }
+                            if ($vals.Count) { $decs[$k] = [Math]::Max(-0.5, [Math]::Max(($vals | Measure-Object -Maximum).Maximum, ($vals | Measure-Object -Average).Average) + 0.05) } }
+                    }
                     for ($k = 0; $k -lt $n; $k++) {
-                        $cx = $A[0] + $ux * ($k + 0.5) * $len; $cy = $A[1] + $uy * ($k + 0.5) * $len
-                        $dansPorte = $false; foreach ($pt in $portes) { for ($q = 0; $q -lt $pt.Points.Count - 1; $q++) { if ((DistSegment @($cx, $cy) $pt.Points[$q] $pt.Points[$q + 1]) -lt 0.35) { $dansPorte = $true } } }
-                        if ($dansPorte) { continue }
-                        if ($vitre) {
-                            $px = $A[0] + $ux * ($k + 1) * $len; $py = $A[1] + $uy * ($k + 1) * $len
-                            $items.Add(@{ asset = $script:TraceVitre; position = @($px, $py, $z0); rotation = @{ yaw = $yaw; pitch = 0; roll = 0 }; scale = @(($len / 3.0), 1, ($H / 3.8)); ground = 'none'; name = "trace $($l.Nom)" })
-                        } else {
-                            $px = $A[0] + $ux * ($k + 1) * $len; $py = $A[1] + $uy * ($k + 1) * $len      # pivot au bout +X du module
-                            $items.Add(@{ asset = $script:TraceMur; position = @($px, $py, $z0); rotation = @{ yaw = $yaw; pitch = 0; roll = 0 }; scale = @(($len / $mod), 1, ($H / 3.8)); ground = 'none'; name = "trace $($l.Nom)" })
+                        $ox = $nxi * $decs[$k]; $oy = $nyi * $decs[$k]
+                        $cx = $A[0] + $ux * ($k + 0.5) * $len + $ox; $cy = $A[1] + $uy * ($k + 0.5) * $len + $oy
+                        $px = $A[0] + $ux * ($k + 1) * $len + $ox; $py = $A[1] + $uy * ($k + 1) * $len + $oy
+                        # tranches verticales : tout le mur, ou dessous / dessus d'une porte qui le traverse
+                        $tranches = @(, @($z0, ($z0 + $H)))
+                        foreach ($pt in $portes) {
+                            $pz = @($pt.Points | ForEach-Object { $_[2] }); $p0 = ($pz | Measure-Object -Minimum).Minimum; $p1 = ($pz | Measure-Object -Maximum).Maximum
+                            if ($p1 - $p0 -lt 1.5) { $p0 = $z0; $p1 = $z0 + 2.4 }
+                            $proche = $false; for ($q = 0; $q -lt $pt.Points.Count - 1; $q++) { if ((DistSegment @($cx, $cy) $pt.Points[$q] $pt.Points[$q + 1]) -lt 0.6) { $proche = $true } }
+                            if ($proche) { $nt = @(); foreach ($tr2 in $tranches) { if ($p0 -gt $tr2[0] + 0.2) { $nt += , @($tr2[0], [Math]::Min($p0, $tr2[1])) }; if ($p1 -lt $tr2[1] - 0.2) { $nt += , @([Math]::Max($p1, $tr2[0]), $tr2[1]) } }; $tranches = $nt }
                         }
-                        $cols.Add(@{ name = "trace $($l.Nom)"; position = @($cx, $cy, ($z0 + $H / 2)); rotation = @{ yaw = $yaw; pitch = 0; roll = 0 }; shapes = @(@{ kind = 'box'; size = @($len, 0.25, $H) }) })
+                        foreach ($tr2 in $tranches) {
+                            $hz = $tr2[1] - $tr2[0]; if ($hz -lt 0.15) { continue }
+                            $asset = if ($vitre) { $script:TraceVitre } else { $script:TraceMur }; $mod = if ($vitre) { 3.0 } else { 1.04 }
+                            $items.Add(@{ asset = $asset; position = @($px, $py, $tr2[0]); rotation = @{ yaw = $yaw; pitch = 0; roll = 0 }; scale = @(($len / $mod), 1, ($hz / 3.8)); ground = 'none'; name = "trace $($l.Nom)" })
+                            $cols.Add(@{ name = "trace $($l.Nom)"; position = @($cx, $cy, ($tr2[0] + $hz / 2)); rotation = @{ yaw = $yaw; pitch = 0; roll = 0 }; shapes = @(@{ kind = 'box'; size = @($len, 0.25, $hz) }) })
+                        }
                     }
                     $ann.Add(@{ type = 'line'; color = $(if ($ouverte) { 'lime' } elseif ($vitre) { 'green' } else { 'cyan' }); points = @(@($A[0], $A[1], ($z0 + 0.2)), @($B[0], $B[1], ($z0 + 0.2))) })
                 }
-            }
-            '^(sol|plafond)$' {
+            }            '^(sol|plafond)$' {
                 $pts = $l.Points; $z = ($pts | ForEach-Object { $_[2] } | Measure-Object -Average).Average
                 if ($l.Type -eq 'plafond') { $z += $H }
                 $xs = $pts | ForEach-Object { $_[0] }; $ys = $pts | ForEach-Object { $_[1] }
