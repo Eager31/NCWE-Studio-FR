@@ -23,3 +23,5 @@ scan-*.tsv
 
 # Mods fabriques localement (contiennent des fichiers extraits du jeu)
 mods/
+
+traces.tsv
