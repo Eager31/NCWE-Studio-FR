@@ -97,7 +97,7 @@ Effets par type (panneau Ajouter, onglet Effets)
   Poussière, Eau et pluie, Météo, Hologrammes, Lumières/néons, Débris, Sang, Insectes, Végétation, Écrans,
   Véhicules, Armes, Personnages, Appareils, Quêtes, Autres (nombre de fichiers entre parenthèses).
   Type déduit du dossier/nom du fichier .particle/.effect. La recherche filtre en plus du type.
-  Règles : tableau EffectTypes dans src\Effets.cs src\Infos.cs src\Bibliotheque.cs.
+  Règles : tableau EffectTypes dans src\Effets.cs src\Infos.cs src\Bibliotheque.cs src\Trace.cs.
 
 Infos et catégories de la bibliothèque (fichiers infos\*.tsv, produits par outils\redtool : redtool infos)
   Bibliothèque : taille du modèle (largeur × profondeur × hauteur) dans le détail ; 15 catégories en plus
@@ -113,4 +113,4 @@ Rayon X (bouton 🩻 juste sous l'outil Sélection, cochable / décochable)
   Même portée que NCWE : objets affichés, à moins de 300 m, modifiables. État mémorisé dans rayon-x.txt.
 
 Recompiler (si src\*.cs change, NCWE ferme)
-  C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:library /optimize+ /r:System.Core.dll /out:NCWE.FR.dll src\NcweFr.cs src\SelectionPanel.cs src\Tools.cs src\Extract.cs src\Places.cs src\Cleaning.cs src\XRay.cs src\Team.cs src\Associes.cs src\Camera.cs src\Effets.cs src\Infos.cs src\Bibliotheque.cs
+  C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:library /optimize+ /r:System.Core.dll /out:NCWE.FR.dll src\NcweFr.cs src\SelectionPanel.cs src\Tools.cs src\Extract.cs src\Places.cs src\Cleaning.cs src\XRay.cs src\Team.cs src\Associes.cs src\Camera.cs src\Effets.cs src\Infos.cs src\Bibliotheque.cs src\Trace.cs

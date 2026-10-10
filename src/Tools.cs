@@ -1,4 +1,4 @@
-// Outils clavier et gizmo :
+﻿// Outils clavier et gizmo :
 //  - R -> outil Pivoter, T -> outil Deplacer (remappes sur les touches 3 / 2 de l'app, hors champs de saisie)
 //  - Maj pendant une rotation au gizmo : aimantation coupee le temps du geste (rotation libre)
 //  - G : aligne les objets selectionnes sur le sol (pente) ou sur le mur proche
@@ -67,6 +67,7 @@ namespace NcweFr
             int off = IntPtr.Size;                    // MSG.message
             int msg = Marshal.ReadInt32(msgPtr, off);
             CleanMouseFilter(msgPtr, msg);
+            TraceKeyFilter(msgPtr, msg);
             int wOff = IntPtr.Size * 2, lOff = IntPtr.Size * 3;
 
             // fin du geste de rotation libre : Maj ou bouton gauche relache
