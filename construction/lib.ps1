@@ -232,10 +232,14 @@ function Maillage-Editer([string]$Id, [scriptblock]$Ops) {
 }
 
 # Faces d'un objet (lecture seule) : liste brute renvoyée par NCWE.
+# Ouvrir l'édition d'un objet du jeu le copie dans le projet (étape « Edit mesh ») : on l'annule après lecture.
 function Maillage-Faces([string]$Id, [int]$Limite = 5000) {
-    Ncwe-Api 'api.meshedit.begin' @{ id = $Id } | Out-Null
+    $b = Ncwe-Api 'api.meshedit.begin' @{ id = $Id }
     try { return (Ncwe-Api 'api.meshedit.faces' @{ limit = $Limite }) }
-    finally { try { Ncwe-Api 'api.meshedit.end' | Out-Null } catch { } }
+    finally {
+        try { Ncwe-Api 'api.meshedit.end' | Out-Null } catch { }
+        if ($b.id -and $b.id -ne $Id) { Ncwe 'undo' @{} | Out-Null }
+    }
 }
 # ---------------- familles ----------------
 $script:Familles = @(
