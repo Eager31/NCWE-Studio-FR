@@ -1,4 +1,4 @@
-// Onglet Effets du panneau Ajouter : liste deroulante « Type d'effet » au-dessus de la recherche
+﻿// Onglet Effets du panneau Ajouter : liste deroulante « Type d'effet » au-dessus de la recherche
 // (fumée, vapeur, feu, étincelles…). Le type est deduit du chemin du fichier .particle / .effect.
 // Ne touche qu'a l'affichage de la liste : la recherche de NCWE reste active et se combine au type.
 
@@ -39,7 +39,9 @@ namespace NcweFr
         const string EffectOther = "Autres";
 
         static object fxCombo, fxSearch, fxList, fxLastSource, fxCatalogRef;
-        static int fxShownIndex;
+        static int fxShownIndex = -2;
+        static bool fxShownInfos;
+        static object sndLastSource;
         static List<string> fxNames = new List<string>();             // index du ComboBox -1 -> type
         static Dictionary<object, string> fxTypeOf;                    // ElementResourceItem -> type
         static bool fxFailed;
@@ -68,8 +70,9 @@ namespace NcweFr
                     fxSearch = WinField(window, "AddSearch"); fxList = WinField(window, "ElementCatalogList");
                     if (fxSearch == null || fxList == null) { fxFailed = true; LogOnce("effets : panneau Ajouter introuvable"); return; }
                 }
-                bool vfx = (WinField(window, "_addCategory") as string) == "Vfx";
-                if (!vfx)
+                string cat = WinField(window, "_addCategory") as string;
+                if (cat == "Sound") SoundsTick(window);
+                if (cat != "Vfx")
                 {
                     if (fxCombo != null && XGetProp(fxSearch, "Header") == fxCombo) XSetProp(fxSearch, "Header", null);
                     return;
@@ -79,20 +82,14 @@ namespace NcweFr
                 if (fxCatalogRef != catalog) BuildEffectTypes(catalog);
                 if (XGetProp(fxSearch, "Header") != fxCombo) XSetProp(fxSearch, "Header", fxCombo);
 
+                // la liste affichee est toujours la notre (type + recherche + infos) ; refaite quand
+                // NCWE la remplace (recherche), quand le type change ou quand les infos arrivent
                 int idx = Convert.ToInt32(XGetProp(fxCombo, "SelectedIndex"));
                 object src = XGetProp(fxList, "ItemsSource");
-                bool typeChanged = idx != fxShownIndex;
-                if (!typeChanged && (idx <= 0 || src == fxLastSource)) return;
-                fxShownIndex = idx;
-                if (idx <= 0)
-                {
-                    // retour a « Tous » : NCWE refait sa liste normale
-                    MethodInfo refresh = window.GetType().GetMethod("RefreshCatalog", AnyInst);
-                    object s = Session();
-                    if (refresh != null && s != null) refresh.Invoke(window, new[] { s });
-                    return;
-                }
-                ApplyEffectFilter(window, catalog, fxNames[idx]);
+                bool infos = InfosReady();
+                if (idx == fxShownIndex && src == fxLastSource && infos == fxShownInfos) return;
+                fxShownIndex = idx; fxShownInfos = infos;
+                ApplyEffectFilter(window, catalog, idx <= 0 || idx >= fxNames.Count ? null : fxNames[idx]);
             }
             catch (Exception e) { LogOnce("effets: " + e.GetBaseException().Message); }
         }
@@ -129,8 +126,31 @@ namespace NcweFr
             fxCombo = Load(x.ToString());
             int sel = keepName != null ? Math.Max(0, fxNames.IndexOf(keepName)) : 0;
             XSetProp(fxCombo, "SelectedIndex", sel);
-            fxShownIndex = -1;                                        // force l'application
+            fxShownIndex = -2;                                        // force l'application
             Log("effets : " + (fxNames.Count - 1) + " types pour " + total + " fichiers");
+        }
+
+        // onglet Sons : boucle / ponctuel et portee devant le detail de chaque emetteur du jeu
+        static void SoundsTick(object window)
+        {
+            object src = XGetProp(fxList, "ItemsSource");
+            if (src == null || src == sndLastSource || !InfosReady()) return;
+            var items = src as IList; if (items == null || items.Count == 0) return;
+            var list = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(items[0].GetType()));
+            int n = 0;
+            foreach (object it in items)
+            {
+                string info = SoundInfo(SoundEventOf(it));
+                if (info != null) n++;
+                list.Add(Enrich(it, info));
+            }
+            sndLastSource = src;
+            if (n == 0) return;
+            FieldInfo sync = window.GetType().GetField("_syncingElements", AnyInst);
+            if (sync != null) sync.SetValue(window, true);
+            try { XSetProp(fxList, "ItemsSource", list); }
+            finally { if (sync != null) sync.SetValue(window, false); }
+            sndLastSource = list;
         }
 
         static void ApplyEffectFilter(object window, IEnumerable catalog, string type)
@@ -145,14 +165,16 @@ namespace NcweFr
             int found = 0;
             foreach (object it in catalog)
             {
-                string t; if (!fxTypeOf.TryGetValue(it, out t) || t != type) continue;
-                string name = (XGetProp(it, "Name") as string) ?? "", detail = (XGetProp(it, "Detail") as string) ?? "";
+                string t; if (type != null && (!fxTypeOf.TryGetValue(it, out t) || t != type)) continue;
+                string ft; fxTypeOf.TryGetValue(it, out ft);
+                string name = (XGetProp(it, "Name") as string) ?? "", detail = ((XGetProp(it, "Detail") as string) ?? "") + " " + ft + " " + NoAccents(ft ?? "");
                 bool ok = true;
                 foreach (string term in terms)
                     if (name.IndexOf(term, StringComparison.OrdinalIgnoreCase) < 0 && detail.IndexOf(term, StringComparison.OrdinalIgnoreCase) < 0) { ok = false; break; }
                 if (!ok) continue;
                 found++;
-                if (list.Count < 3000) list.Add(it);
+                string fi = FxInfo(XGetProp(it, "Path") as string);
+                if (list.Count < 3000) list.Add(Enrich(it, ft + (fi != null ? " · " + fi : "")));
             }
             FieldInfo sync = window.GetType().GetField("_syncingElements", AnyInst);
             if (sync != null) sync.SetValue(window, true);
@@ -161,7 +183,7 @@ namespace NcweFr
             fxLastSource = list;
             object count = WinField(window, "AddCount");
             if (count != null)
-                XSetProp(count, "Text", found.ToString("N0") + " effet" + (found > 1 ? "s" : "") + " « " + type + " »"
+                XSetProp(count, "Text", found.ToString("N0", Fr) + " effet" + (found > 1 ? "s" : "") + (type != null ? " « " + type + " »" : "")
                     + (found > 3000 ? " (3 000 premiers)" : "") + " · choisissez-en un, puis cliquez dans le monde");
         }
     }

@@ -17,6 +17,25 @@ Fichiers produits :
 - **`modeles.tsv`** : le cache des modèles (taille, apparences). Il se remplit tout seul, et chaque modèle n'est mesuré qu'une fois.
 - **`kits\*.tsv`** : modifiables à la main. On peut supprimer des lignes ou en ajouter. Colonnes : famille, chemin, nombre, apparences, taille…
 
+## Infos de tout le jeu (`..\infos\`)
+
+Produites une fois par `redtool infos` (à refaire après une mise à jour du jeu) :
+
+- `tailles-modeles.tsv` : taille et origine des ~100 000 modèles. `Modeles` les lit d'abord, sans appel à NCWE.
+- `effets.tsv` : chaque `.particle` / `.effect`, en boucle ou durée, taille approximative.
+- `sons.tsv` : chaque événement sonore, en boucle ou ponctuel, portée, durée, étiquettes.
+
+Recherches sans NCWE (dans `lib.ps1`) :
+
+```powershell
+Chercher-Modeles -Famille 'Assises' -Mots 'bar','stool' -HauteurMin 0.6 -HauteurMax 0.9
+Ensemble 'base\environment\furniture\kitchen\kitchen_a_cabinet.mesh'   # pièces assorties du même dossier
+Chercher-Effets -Mots 'steam' -Boucle $true -TailleMax 3
+Chercher-Sons -Mots 'fan' -Boucle $true -PorteeMax 20
+```
+
+Régénérer : `$env:REDTOOL_GAME='<dossier du jeu>'; dotnet exec --runtimeconfig outils\redtool\redtool.runtimeconfig.json outils\redtool\redtool.exe infos <dossier NCWE> <dossier du jeu> infos` (environ 20 min).
+
 ## Format d'un plan (`plans\*.json`)
 
 Les positions sont en **mètres locaux** :

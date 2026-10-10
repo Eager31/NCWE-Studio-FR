@@ -1,8 +1,9 @@
-// Outil autonome (sans interface) pour les fichiers du jeu.
+﻿// Outil autonome (sans interface) pour les fichiers du jeu.
 //   find <dossier jeu> <chemin depot>…                  : dans quelle archive se trouve chaque fichier
 //   extract <dossier jeu> <dossier sortie> <chemin>…     : extrait les fichiers bruts (CR2W)
 //   ent <dossier NCWE> <fichier .ent extrait>           : apparences d'une entite (nom -> .app)
 //   app <dossier NCWE> <fichier .app extrait> [nom]      : composants des apparences (meshes, transformations)
+//   dump / infos …                                      : tailles, durees, boucles (voir RedInfos.cs)
 //   passage …                                          : mod ArchiveXL (voir RedPassage.cs)
 // Lecture des archives : index RDAR lu directement, decompression avec la DLL Oodle du jeu.
 // Lancement : dotnet exec --runtimeconfig redtool.runtimeconfig.json redtool.exe …
@@ -29,6 +30,8 @@ static partial class RedTool
                 case "ent": Wk(args[1]); return Ent(args[2]);
                 case "app": Wk(args[1]); return App(args[2], args.Length > 3 ? args[3] : null);
                 case "passage": Wk(args[1]); return Passage(args[2], args[3], args[4], args[5]);
+                case "dump": Wk(args[1]); return DumpCmd(args[2], args[3], args.Length > 4 ? int.Parse(args[4]) : 5);
+                case "infos": Wk(args[1]); return Infos(args[2], args[3], args.Length > 4 ? int.Parse(args[4]) : 0);
             }
         }
         catch (Exception e) { Console.WriteLine("ERREUR " + e.GetBaseException()); return 2; }

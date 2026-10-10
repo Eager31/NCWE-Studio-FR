@@ -1,6 +1,7 @@
 ﻿# Bibliothèque commune des outils de construction NCWE (à charger avec : . "$PSScriptRoot\lib.ps1")
 #  - client MCP minimal vers NCWE Studio (déjà ouvert), via ..\ncwe-mcp.cmd
-#  - cache des modèles (modeles.tsv) : un asset_info par modèle, jamais deux
+#  - tailles des modèles : infos\tailles-modeles.tsv (tout le jeu, lu par redtool infos), sinon modeles.tsv / asset_info
+#  - recherche de modèles par famille, mots et taille, sans appel à NCWE (Chercher-Modeles, Ensemble)
 #  - familles d'objets (sol, murs, assises…) d'après le chemin du modèle
 #  - repère local d'un plan (origine + cap) <-> monde
 
@@ -83,6 +84,10 @@ function Cache-Charger {
 # Renvoie les infos de chaque chemin (asset_info groupé pour ceux qui manquent). Chemin inconnu -> absent du résultat.
 function Modeles([string[]]$Chemins) {
     $cache = Cache-Charger
+    foreach ($c in $Chemins) {
+        if (-not $c) { continue }; $k = $c.ToLowerInvariant()
+        if (-not $cache.ContainsKey($k)) { $m = Taille-Jeu $c; if ($m) { $cache[$k] = $m } }
+    }
     $manque = @($Chemins | Where-Object { $_ -and -not $cache.ContainsKey($_.ToLowerInvariant()) } | Sort-Object -Unique)
     for ($i = 0; $i -lt $manque.Count; $i += 40) {
         $lot = $manque[$i..([Math]::Min($i + 39, $manque.Count - 1))]
@@ -104,6 +109,101 @@ function Modeles([string[]]$Chemins) {
     return $res
 }
 
+# ---------------- tailles de tout le jeu (infos\tailles-modeles.tsv) ----------------
+# chemin, largeur x, profondeur y, hauteur z, min x;y;z  -> mêmes champs que le cache (Taille, Min, Max)
+$script:Jeu = $null
+# lecture rapide (C#) : dictionnaire chemin (minuscules) -> ligne brute ; analysée seulement quand on s'en sert
+if (-not ('NcweFrTailles' -as [type])) {
+    Add-Type -TypeDefinition @"
+using System; using System.Collections.Generic; using System.IO;
+public static class NcweFrTailles {
+    public static Dictionary<string, string> Lire(string f) {
+        var d = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (string l in File.ReadLines(f)) { if (l.Length == 0 || l[0] == '#') continue; int t = l.IndexOf('\t'); if (t > 0) d[l.Substring(0, t)] = l; }
+        return d;
+    }
+    public static List<string> Filtrer(Dictionary<string, string> d, string[] mots, string dossier, double hMin, double hMax, double lMin, double lMax) {
+        var res = new List<string>(); var inv = System.Globalization.CultureInfo.InvariantCulture;
+        foreach (var kv in d) {
+            string c = kv.Key.ToLowerInvariant();
+            if (dossier != null && !c.StartsWith(dossier)) continue;
+            if (c.Contains("proxy") || c.Contains("_lod") || c.Contains("\\_") || c.Contains("shadow") || c.Contains("collision")) continue;
+            bool ok = true; foreach (string w in mots) if (!c.Contains(w)) { ok = false; break; } if (!ok) continue;
+            string[] p = kv.Value.Split('\t'); if (p.Length < 5) continue;
+            double x = double.Parse(p[1], inv), y = double.Parse(p[2], inv), z = double.Parse(p[3], inv), l = Math.Max(x, y);
+            if (z < hMin || z > hMax || l < lMin || l > lMax) continue;
+            res.Add(kv.Value);
+        }
+        return res;
+    }
+}
+"@
+}
+function Ligne-Modele([string]$l) {
+    $c = $l.Split("`t"); $taille = @((P $c[1]), (P $c[2]), (P $c[3])); $min = Vec $c[4]
+    return [pscustomobject]@{ Chemin = $c[0]; Taille = $taille; Min = $min; Max = @(($min[0] + $taille[0]), ($min[1] + $taille[1]), ($min[2] + $taille[2])); Apparences = @(); Defaut = '' }
+}
+function Tailles-Jeu {
+    if ($script:Jeu) { return $script:Jeu }
+    $f = Join-Path (Split-Path $Racine -Parent) 'infos\tailles-modeles.tsv'
+    $script:Jeu = if (Test-Path $f) { [NcweFrTailles]::Lire($f) } else { New-Object 'Collections.Generic.Dictionary[string,string]' }
+    return $script:Jeu
+}
+function Taille-Jeu([string]$Chemin) { $l = $null; if ((Tailles-Jeu).TryGetValue($Chemin, [ref]$l)) { return Ligne-Modele $l }; return $null }
+# Modèles du jeu par famille (voir Famille), mots du chemin (tous requis) et taille en mètres.
+#   Chercher-Modeles -Famille 'Assises' -Mots 'bar','stool' -HauteurMin 0.6 -HauteurMax 0.9
+function Chercher-Modeles([string]$Famille, [string[]]$Mots = @(), [double]$HauteurMin = 0, [double]$HauteurMax = 1e9,
+                          [double]$LargeurMin = 0, [double]$LargeurMax = 1e9, [string]$Dossier, [int]$Max = 50) {
+    $res = New-Object Collections.Generic.List[object]
+    $d = if ($Dossier) { $Dossier.ToLowerInvariant() } else { $null }
+    foreach ($l in [NcweFrTailles]::Filtrer((Tailles-Jeu), [string[]]@($Mots | ForEach-Object { $_.ToLowerInvariant() }), $d, $HauteurMin, $HauteurMax, $LargeurMin, $LargeurMax)) {
+        $m = Ligne-Modele $l
+        if ($Famille -and (Famille $m.Chemin) -ne $Famille) { continue }
+        $res.Add($m); if ($res.Count -ge $Max) { break }
+    }
+    return $res
+}
+# Ensemble d'un modèle : les pièces de son dossier (dans le jeu, un dossier = un ensemble assorti).
+function Ensemble([string]$Chemin, [int]$Max = 60) {
+    $dossier = Split-Path $Chemin -Parent
+    $nom = [IO.Path]::GetFileNameWithoutExtension($Chemin)
+    $parts = $nom.Split('_'); $prefixe = if ($parts.Count -gt 2) { ($parts[0..($parts.Count - 2)] -join '_') } else { $nom }
+    $res = New-Object Collections.Generic.List[object]
+    foreach ($l in [NcweFrTailles]::Filtrer((Tailles-Jeu), [string[]]@(), $dossier.ToLowerInvariant() + '\', 0, 1e9, 0, 1e9)) {
+        $m = Ligne-Modele $l
+        if ((Split-Path $m.Chemin -Parent) -ne $dossier) { continue }
+        $res.Add($m); if ($res.Count -ge $Max) { break }
+    }
+    return $res
+}
+# ---------------- effets et sons du jeu (infos\effets.tsv, infos\sons.tsv) ----------------
+#   Chercher-Effets -Mots 'steam' -Boucle $true -TailleMax 3
+#   Chercher-Sons -Mots 'fan' -Boucle $true -PorteeMax 20
+function Lire-Infos([string]$Nom) {
+    $f = Join-Path (Split-Path $Racine -Parent) "infos\$Nom"
+    if (-not (Test-Path $f)) { return @() }
+    return [IO.File]::ReadLines($f) | Where-Object { $_.Length -gt 0 -and $_[0] -ne '#' } | ForEach-Object { , $_.Split("`t") }
+}
+function Chercher-Effets([string[]]$Mots = @(), $Boucle = $null, [double]$TailleMax = 1e9, [int]$Max = 30) {
+    $res = New-Object Collections.Generic.List[object]
+    foreach ($c in (Lire-Infos 'effets.tsv')) {
+        $p = $c[0].ToLowerInvariant(); $ok = $true; foreach ($w in $Mots) { if (-not $p.Contains($w.ToLowerInvariant())) { $ok = $false; break } }; if (-not $ok) { continue }
+        $b = $c[1] -eq 'oui'; if ($null -ne $Boucle -and $b -ne $Boucle) { continue }
+        $e = @($c[3].Split(';') | ForEach-Object { P $_ }); if (($e | Measure-Object -Maximum).Maximum -gt $TailleMax) { continue }
+        $res.Add([pscustomobject]@{ Chemin = $c[0]; Boucle = $b; Duree = $c[2]; Taille = $e }); if ($res.Count -ge $Max) { break }
+    }
+    return $res
+}
+function Chercher-Sons([string[]]$Mots = @(), $Boucle = $null, [double]$PorteeMax = 1e9, [int]$Max = 30) {
+    $res = New-Object Collections.Generic.List[object]
+    foreach ($c in (Lire-Infos 'sons.tsv')) {
+        $p = $c[0].ToLowerInvariant(); $ok = $true; foreach ($w in $Mots) { if (-not $p.Contains($w.ToLowerInvariant())) { $ok = $false; break } }; if (-not $ok) { continue }
+        $b = $c[1] -eq 'oui'; if ($null -ne $Boucle -and $b -ne $Boucle) { continue }
+        if ((P $c[2]) -gt $PorteeMax) { continue }
+        $res.Add([pscustomobject]@{ Evenement = $c[0]; Boucle = $b; Portee = (P $c[2]); DureeMax = (P $c[4]); Etiquettes = $(if ($c.Count -gt 5) { $c[5] } else { '' }) }); if ($res.Count -ge $Max) { break }
+    }
+    return $res
+}
 # ---------------- familles ----------------
 $script:Familles = @(
     @('Sol', '\\floor|_floor|\\sol|tatami|carpet|rug'),

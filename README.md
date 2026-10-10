@@ -51,5 +51,5 @@ Les points de chacun apparaissent ensuite chez tous dans Monde > Lieux, catégor
 Recompiler le plugin (si `src\*.cs` change) :
 
 ```
-C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /nologo /target:library /optimize+ /r:System.Core.dll /out:NCWE.FR.dll src\NcweFr.cs src\SelectionPanel.cs src\Tools.cs src\Extract.cs src\Places.cs src\Cleaning.cs src\XRay.cs src\Team.cs src\Associes.cs src\Camera.cs src\Effets.cs
+C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /nologo /target:library /optimize+ /r:System.Core.dll /out:NCWE.FR.dll src\NcweFr.cs src\SelectionPanel.cs src\Tools.cs src\Extract.cs src\Places.cs src\Cleaning.cs src\XRay.cs src\Team.cs src\Associes.cs src\Camera.cs src\Effets.cs src\Infos.cs src\Bibliotheque.cs
 ```

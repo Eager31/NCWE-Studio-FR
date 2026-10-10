@@ -1,4 +1,4 @@
-// NCWE Studio - traduction francaise de l'interface (plugin, aucun fichier de l'app modifie).
+﻿// NCWE Studio - traduction francaise de l'interface (plugin, aucun fichier de l'app modifie).
 // Charge par .NET via DOTNET_STARTUP_HOOKS (voir "Lancer NCWE en francais.cmd").
 // Ne traduit que l'affichage : les donnees (props, meshes, chemins, noms saisis) ne sont jamais modifiees.
 // Compile avec le csc de .NET Framework (C# 5), tout passe par reflexion : aucune dependance a WinUI a la compilation.
@@ -341,6 +341,7 @@ namespace NcweFr
                         if (content == null) continue;
                         Walk(content);
                         if (w.GetType().Name == "MainWindow") { SelectionTick(w, content); XRayTick(w, content); }
+                        else if (w.GetType().Name == "LibraryWindow") LibraryTick(w);
                         object root = tUIElement.GetProperty("XamlRoot").GetValue(content, null);
                         if (root != null)
                             foreach (object popup in (IEnumerable)mPopups.Invoke(null, new[] { root }))
