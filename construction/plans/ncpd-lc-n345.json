@@ -1,0 +1,208 @@
+{
+    "origine":  [
+                    -1468,
+                    1248,
+                    34.5
+                ],
+    "nom":  "ncpd_lc_n345",
+    "etapes":  [
+                   {
+                       "nom":  "Vestiaires agents",
+                       "salle":  {
+                                     "sol":  "base\\environment\\architecture\\common\\int\\int_ent_industrial_a\\int_ent_industrial_a_floor_l300_a.mesh",
+                                     "lumieres":  6,
+                                     "hauteur":  4.2,
+                                     "plafond":  "base\\environment\\architecture\\common\\int\\int_common_a\\int_common_a_ceiling_tiles_a_l300_w300_a.mesh",
+                                     "centre":  [
+                                                    -25,
+                                                    0,
+                                                    0
+                                                ],
+                                     "i":  800,
+                                     "taille":  [
+                                                    11.7,
+                                                    19.7
+                                                ],
+                                     "k":  6500,
+                                     "inverser_murs":  true,
+                                     "portes":  [
+                                                    {
+                                                        "hauteur":  2.8,
+                                                        "decalage":  4.5,
+                                                        "largeur":  2.4,
+                                                        "mur":  "est"
+                                                    },
+                                                    {
+                                                        "hauteur":  2.8,
+                                                        "decalage":  0,
+                                                        "largeur":  2.4,
+                                                        "mur":  "sud"
+                                                    }
+                                                ],
+                                     "mur":  "base\\environment\\architecture\\common\\int\\int_common_techpanel_a\\int_common_techpanel_a_wall_h400_l100_a.mesh"
+                                 },
+                       "id":  "vestiaires"
+                   },
+                   {
+                       "nom":  "Salle de briefing",
+                       "salle":  {
+                                     "sol":  "base\\environment\\architecture\\common\\int\\int_ent_industrial_a\\int_ent_industrial_a_floor_l300_a.mesh",
+                                     "lumieres":  4,
+                                     "hauteur":  4.2,
+                                     "plafond":  "base\\environment\\architecture\\common\\int\\int_common_a\\int_common_a_ceiling_tiles_a_l300_w300_a.mesh",
+                                     "centre":  [
+                                                    -12.5,
+                                                    4.5,
+                                                    0
+                                                ],
+                                     "i":  800,
+                                     "taille":  [
+                                                    12.1,
+                                                    10.7
+                                                ],
+                                     "k":  6500,
+                                     "inverser_murs":  true,
+                                     "portes":  [
+                                                    {
+                                                        "hauteur":  2.8,
+                                                        "decalage":  0,
+                                                        "largeur":  2.4,
+                                                        "mur":  "ouest"
+                                                    },
+                                                    {
+                                                        "hauteur":  2.8,
+                                                        "decalage":  0,
+                                                        "largeur":  2.4,
+                                                        "mur":  "est"
+                                                    },
+                                                    {
+                                                        "hauteur":  2.8,
+                                                        "decalage":  0,
+                                                        "largeur":  3,
+                                                        "mur":  "sud"
+                                                    }
+                                                ],
+                                     "mur":  "base\\environment\\architecture\\common\\int\\int_common_techpanel_a\\int_common_techpanel_a_wall_h400_l100_a.mesh"
+                                 },
+                       "id":  "briefing"
+                   },
+                   {
+                       "nom":  "Dispatch et netrunners",
+                       "salle":  {
+                                     "sol":  "base\\environment\\architecture\\common\\int\\int_ent_industrial_a\\int_ent_industrial_a_floor_l300_a.mesh",
+                                     "lumieres":  4,
+                                     "hauteur":  4.2,
+                                     "plafond":  "base\\environment\\architecture\\common\\int\\int_common_a\\int_common_a_ceiling_tiles_a_l300_w300_a.mesh",
+                                     "centre":  [
+                                                    -0.1,
+                                                    4.5,
+                                                    0
+                                                ],
+                                     "i":  800,
+                                     "taille":  [
+                                                    11.5,
+                                                    10.7
+                                                ],
+                                     "k":  7500,
+                                     "inverser_murs":  true,
+                                     "portes":  [
+                                                    {
+                                                        "hauteur":  2.8,
+                                                        "decalage":  0,
+                                                        "largeur":  2.4,
+                                                        "mur":  "ouest"
+                                                    },
+                                                    {
+                                                        "hauteur":  2.8,
+                                                        "decalage":  0,
+                                                        "largeur":  2.4,
+                                                        "mur":  "sud"
+                                                    }
+                                                ],
+                                     "mur":  "base\\environment\\architecture\\common\\int\\int_common_techpanel_a\\int_common_techpanel_a_wall_h400_l100_a.mesh"
+                                 },
+                       "id":  "dispatch"
+                   },
+                   {
+                       "nom":  "Armurerie generale et entretien",
+                       "salle":  {
+                                     "sol":  "base\\environment\\architecture\\common\\int\\int_ent_industrial_a\\int_ent_industrial_a_floor_l300_a.mesh",
+                                     "lumieres":  12,
+                                     "hauteur":  4.2,
+                                     "plafond":  "base\\environment\\architecture\\common\\int\\int_common_a\\int_common_a_ceiling_tiles_a_l300_w300_a.mesh",
+                                     "centre":  [
+                                                    -6.4,
+                                                    -18.6,
+                                                    0
+                                                ],
+                                     "i":  800,
+                                     "taille":  [
+                                                    24.2,
+                                                    34.2
+                                                ],
+                                     "k":  7000,
+                                     "inverser_murs":  true,
+                                     "portes":  [
+                                                    {
+                                                        "hauteur":  2.8,
+                                                        "decalage":  -6.1,
+                                                        "largeur":  3,
+                                                        "mur":  "nord"
+                                                    },
+                                                    {
+                                                        "hauteur":  2.8,
+                                                        "decalage":  6.3,
+                                                        "largeur":  2.4,
+                                                        "mur":  "nord"
+                                                    },
+                                                    {
+                                                        "hauteur":  2.8,
+                                                        "decalage":  0,
+                                                        "largeur":  2.4,
+                                                        "mur":  "ouest"
+                                                    }
+                                                ],
+                                     "mur":  "base\\environment\\architecture\\common\\int\\int_common_techpanel_a\\int_common_techpanel_a_wall_h400_l100_a.mesh"
+                                 },
+                       "id":  "armurerie"
+                   },
+                   {
+                       "nom":  "Salle de repos",
+                       "salle":  {
+                                     "sol":  "base\\environment\\architecture\\common\\int\\int_ent_industrial_a\\int_ent_industrial_a_floor_l300_a.mesh",
+                                     "lumieres":  6,
+                                     "hauteur":  4.2,
+                                     "plafond":  "base\\environment\\architecture\\common\\int\\int_common_a\\int_common_a_ceiling_tiles_a_l300_w300_a.mesh",
+                                     "centre":  [
+                                                    -25,
+                                                    -23.1,
+                                                    0
+                                                ],
+                                     "i":  800,
+                                     "taille":  [
+                                                    11.7,
+                                                    25.2
+                                                ],
+                                     "k":  5000,
+                                     "inverser_murs":  true,
+                                     "portes":  [
+                                                    {
+                                                        "hauteur":  2.8,
+                                                        "decalage":  0,
+                                                        "largeur":  2.4,
+                                                        "mur":  "nord"
+                                                    },
+                                                    {
+                                                        "hauteur":  2.8,
+                                                        "decalage":  4.5,
+                                                        "largeur":  2.4,
+                                                        "mur":  "est"
+                                                    }
+                                                ],
+                                     "mur":  "base\\environment\\architecture\\common\\int\\int_common_techpanel_a\\int_common_techpanel_a_wall_h400_l100_a.mesh"
+                                 },
+                       "id":  "repos"
+                   }
+               ],
+    "cap":  0
+}

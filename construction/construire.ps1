@@ -30,7 +30,7 @@ $planFichier = (Resolve-Path $Plan).Path
 $pl = [IO.File]::ReadAllText($planFichier, [Text.Encoding]::UTF8) | ConvertFrom-Json
 $nomPlan = Champ $pl 'nom' ([IO.Path]::GetFileNameWithoutExtension($planFichier))
 Repere (Liste (Champ $pl 'origine' @(0, 0, 0))) ([double](Champ $pl 'cap' 0))
-$etapes = Liste $pl.etapes
+$etapes = @(Liste $pl.etapes)
 
 # noms courts -> chemins : kits du plan puis cache des modèles
 $noms = @{}
@@ -205,6 +205,8 @@ function Salle($s) {
     if (Champ $s 'k') { $b.light_temperature = [double]$s.k }
     if (Champ $s 'i') { $b.light_intensity = [double]$s.i }
     if ($null -ne (Champ $s 'collision')) { $b.collision = [bool]$s.collision }
+    if ([bool](Champ $s 'inverser_murs' $false)) { $b.flip_walls = $true }
+    if ([bool](Champ $s 'inverser_plafond' $true)) { $b.flip_ceiling = $true }
     $portes = @(); foreach ($p in (Liste (Champ $s 'portes'))) {
         $d = @{ wall = $MURS[[string]$p.mur] }; if (Champ $p 'decalage') { $d.offset = [double]$p.decalage }
         if (Champ $p 'largeur') { $d.width = [double]$p.largeur }; if (Champ $p 'hauteur') { $d.height = [double]$p.hauteur }
@@ -240,29 +242,38 @@ function Controler-Etape($e, [int]$i) {
     else { throw "Détrompeur : donnez « interieur » (point dans la pièce, en local) dans l'étape ou le plan." }
     $q = Ncwe-Api 'api.query' @{ center = @($pi); radius = 80; text = $script:nomCourant; limit = 2000; show = $false }
     $objs = @($q.objects | Where-Object { $_.name -and $_.name.StartsWith($script:nomCourant) -and $_.asset })
-    $ann = New-Object Collections.Generic.List[object]; $n = 0; $mauvais = 0
-    foreach ($o in $objs) {
-        $fam = Famille $o.asset; $bx = $o.bounds
-        $fin = $bx -and ([Math]::Min([Math]::Min($bx.size[0], $bx.size[1]), $bx.size[2]) -lt 0.6)
-        if ($fam -notin 'Murs', 'Sol', 'Plafond' -and -not $fin) { continue }
-        $n++
-        if ($o.name -like '*_sanstain*') { Write-Output ("  {0} : sans tain (voulu)" -f $o.name); continue }
-        $r = Maillage-Faces $o.id
-        $vers = 0.0; $dos = 0.0
-        foreach ($fc in @($r.faces)) {
-            $nm = Vec3 (Champ $fc 'normal'); $c = Vec3 (Champ $fc 'center' (Champ $fc 'centre'))
-            if (-not $nm -or -not $c) { continue }
-            $a = [double](Champ $fc 'area' 1)
-            $d = $nm[0] * ($pi[0] - $c[0]) + $nm[1] * ($pi[1] - $c[1]) + $nm[2] * ($pi[2] - $c[2])
-            if ($d -gt 0) { $vers += $a } else { $dos += $a }
-        }
-        $tot = $vers + $dos
-        $verdict = if ($tot -le 0) { 'faces illisibles' } elseif ($vers / $tot -ge 0.8) { 'OK' } elseif ($dos / $tot -ge 0.8) { 'À L''ENVERS' } else { 'deux faces / mixte' }
-        if ($verdict -eq 'À L''ENVERS') { $mauvais++; if ($bx) { $ann.Add(@{ type = 'box'; min = @($bx.min); max = @($bx.max); color = 'red' }) } }
-        Write-Output ("  {0} [{1}] : {2} (vers l'intérieur {3:P0})" -f $o.name, $o.id, $verdict, $(if ($tot) { $vers / $tot } else { 0 }))
+    # build_room nomme ses modules d'après le modèle : on prend aussi les objets du projet dans la boîte de la salle
+    foreach ($b in $script:salles) {
+        $hw = $b.size[0] / 2 + 0.6; $hd = $b.size[1] / 2 + 0.6; $c = $b.center
+        $qs = Ncwe-Api 'api.query' @{ min = @(($c[0] - $hw), ($c[1] - $hd), ($c[2] - 0.5)); max = @(($c[0] + $hw), ($c[1] + $hd), ($c[2] + $b.height + 0.5)); source = 'project'; kinds = @('mesh'); limit = 2000; show = $false }
+        $deja = @{}; foreach ($o in $objs) { $deja[$o.id] = 1 }
+        foreach ($o in @($qs.objects)) { if ($o.asset -and -not $deja.ContainsKey($o.id)) { $objs += $o } }
     }
-    $ann.Add(@{ type = 'point'; position = @($pi); color = 'green' })
-    Ncwe 'annotate' @{ items = @($ann); duration = 300; clear = $true } | Out-Null
+    $ann = New-Object Collections.Generic.List[object]; $n = 0; $mauvais = 0
+    # un rayon depuis l'intérieur vers le centre de chaque surface : la normale touchée dit quel côté regarde la pièce
+    # (aucune édition de maillage, rien dans l'historique d'annulation)
+    $cibles = @()
+    foreach ($o in $objs) {
+        $fam = Famille $o.asset; $bx = $o.bounds; if (-not $bx) { continue }
+        $fin = [Math]::Min([Math]::Min($bx.size[0], $bx.size[1]), $bx.size[2]) -lt 0.6
+        if ($fam -notin 'Murs', 'Sol', 'Plafond' -and -not $fin) { continue }
+        if ($o.name -like '*_sanstain*') { $n++; Write-Output ("  {0} : sans tain (voulu)" -f $o.name); continue }
+        $cibles += $o
+    }
+    for ($k = 0; $k -lt $cibles.Count; $k += 400) {
+        $lot = $cibles[$k..([Math]::Min($k + 399, $cibles.Count - 1))]
+        $rays = @($lot | ForEach-Object { $c = $_.bounds; @{ origin = @($pi); towards = @((($c.min[0] + $c.max[0]) / 2), (($c.min[1] + $c.max[1]) / 2), (($c.min[2] + $c.max[2]) / 2)); max_distance = 120 } })
+        $r = Ncwe 'raycast' @{ rays = $rays; show = $false; normal = $true }
+        for ($q = 0; $q -lt $lot.Count; $q++) {
+            $o = $lot[$q]; $h = $r.results[$q]; $n++
+            if (-not $h.hit -or $h.id -ne $o.id -or -not $h.normal) { Write-Output ("  {0} [{1}] : masqué" -f $o.name, $o.id); continue }
+            $d = $h.normal[0] * ($pi[0] - $h.point[0]) + $h.normal[1] * ($pi[1] - $h.point[1]) + $h.normal[2] * ($pi[2] - $h.point[2])
+            $verdict = if ($d -gt 0) { 'OK' } else { "À L'ENVERS" }
+            if ($d -le 0) { $mauvais++; $ann.Add(@{ type = 'box'; min = @($o.bounds.min); max = @($o.bounds.max); color = 'red' }) }
+            Write-Output ("  {0} [{1}] : {2}" -f $o.name, $o.id, $verdict)
+        }
+    }    $ann.Add(@{ type = 'point'; position = @($pi); color = 'green' })
+    Ncwe 'annotate' @{ items = $ann.ToArray(); duration = 300; clear = $true } | Out-Null
     Write-Output ("Détrompeur étape {0} : {1} surfaces contrôlées, {2} à l'envers (encadrées en rouge, point intérieur en vert)" -f $i, $n, $mauvais)
     if ($mauvais) { Write-Output "  Corriger : « retourner »: true ou « deux_faces »: true sur l'objet (ou yaw +180), ou « sans_tain »: true si c'est voulu." }
 }
@@ -309,7 +320,17 @@ try {
     foreach ($i in (Etapes $Etape $etapes.Count)) {
         $e = $etapes[$i - 1]; Preparer $e $i
         $ids = 0
-        foreach ($b in $script:salles) { $r = Ncwe 'build_room' $b; $ids += @($r.ids).Count + @($r.created).Count }
+        foreach ($b in $script:salles) {
+            $fb = @{}; foreach ($k in $b.Keys) { if ($k -ne 'flip_ceiling') { $fb[$k] = $b[$k] } }
+            $r = Ncwe 'build_room' $fb; $ids += @($r.ids).Count + @($r.created).Count
+            # plafond vu d'en dessous : les dalles du jeu ont leur bonne face vers le haut -> retournées (roll 180)
+            if ($b.flip_ceiling -and $b.ceiling_asset) {
+                $hw = $b.size[0] / 2 + 0.3; $hd = $b.size[1] / 2 + 0.3; $c = $b.center; $zc = $c[2] + $b.height
+                $q = Ncwe-Api 'api.query' @{ min = @(($c[0] - $hw), ($c[1] - $hd), ($zc - 1)); max = @(($c[0] + $hw), ($c[1] + $hd), ($zc + 0.6)); source = 'project'; kinds = @('mesh'); limit = 2000; show = $false }
+                $dalles = @($q.objects | Where-Object { $_.asset -eq $b.ceiling_asset -and [Math]::Abs([double]$_.rotation.roll) -lt 1 })
+                if ($dalles.Count) { Ncwe 'transform_objects' @{ items = @($dalles | ForEach-Object { @{ id = $_.id; rotation = @{ yaw = [double]$_.rotation.yaw; pitch = [double]$_.rotation.pitch; roll = 180 } } }) } | Out-Null }
+            }
+        }
         if ($script:items.Count -or $script:elems.Count) {
             $pa = @{ items = $script:items.ToArray() }; if ($script:elems.Count) { $pa.elements = $script:elems.ToArray() }
             $r = Ncwe 'place_objects' $pa

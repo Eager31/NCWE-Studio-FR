@@ -1,4 +1,4 @@
-# Mémo construction NCWE : erreurs à ne pas refaire
+﻿# Mémo construction NCWE : erreurs à ne pas refaire
 
 À relire avant chaque construction de lieu (restaurant, boutique, appartement…) via l'API / MCP de NCWE.
 
@@ -49,3 +49,13 @@
 
 ## Orientation
 - `yaw` tourne autour de Z, 0 = face à +Y (nord). Un comptoir/mur posé le long de l'axe Y → `yaw: 90`. Vérifier sur une capture que la face « avant » regarde la salle, sinon `yaw + 180`.
+
+
+## Intérieurs dans un bâtiment du jeu (leçons du commissariat de Little China, 2026-10-10)
+- Les murs et dalles du **bâtiment du jeu** n'ont qu'une face (vers l'extérieur) : de l'intérieur on voit la ville au travers. Toujours construire ses propres murs intérieurs.
+- `build_room` pose les murs `int_common_techpanel_a` **bonne face vers l'extérieur** : mettre `"inverser_murs": true` (flip_walls) dans chaque salle.
+- Les dalles de plafond du jeu (`int_common_a_ceiling_tiles_*`) ont leur face vers le haut : `construire.ps1` les retourne (roll 180) automatiquement (`"inverser_plafond"`, vrai par défaut). Ce sont des grilles sombres : prévoir des dalles lumineuses `..._ceiling_tiles_a_light_...` ou des lampes.
+- Salles voisines : laisser **0,3 m** entre deux salles (sinon deux murs superposés scintillent) et aligner les portes des deux côtés (même position, même largeur).
+- Mesurer avant : carte des hauteurs par rayons (dalles existantes, rampes), hauteur sous toit, et position exacte des ouvertures (rayons horizontaux).
+- Ne jamais ouvrir l'édition de maillage (`api.meshedit.begin`) sur les objets juste pour lire : chaque ouverture ajoute une étape « Edit mesh » dans l'historique. Le détrompeur lit l'orientation par rayon (normale).
+- Annuler plusieurs étapes à soi : lire `api.status.project.undo` avant chaque `undo`. Pour défaire beaucoup d'objets, une seule suppression ciblée (`api.delete` de ses propres ids) est bien plus rapide que 100 annulations.

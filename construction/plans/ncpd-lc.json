@@ -1,0 +1,338 @@
+{
+    "nom":  "ncpd_lc",
+    "origine":  [
+                    -1468,
+                    1248,
+                    39.0
+                ],
+    "cap":  0,
+    "interieur":  [
+                      -3,
+                      0,
+                      2
+                  ],
+    "kits":  [
+                 "ncpd-the-glen"
+             ],
+    "etapes":  [
+                   {
+                       "id":  "hall",
+                       "nom":  "Hall et accueil",
+                       "salle":  {
+                                     "centre":  [
+                                                    0,
+                                                    0,
+                                                    0
+                                                ],
+                                     "taille":  [
+                                                    11.7,
+                                                    15.7
+                                                ],
+                                     "hauteur":  5.2,
+                                     "inverser_murs":  true,
+                                     "sol":  "base\\environment\\architecture\\common\\int\\int_ent_industrial_a\\int_ent_industrial_a_floor_l300_a.mesh",
+                                     "mur":  "base\\environment\\architecture\\common\\int\\int_common_techpanel_a\\int_common_techpanel_a_wall_h400_l100_a.mesh",
+                                     "plafond":  "base\\environment\\architecture\\common\\int\\int_common_a\\int_common_a_ceiling_tiles_a_l300_w300_a.mesh",
+                                     "lumieres":  6,
+                                     "k":  6800,
+                                     "i":  900,
+                                     "portes":  [
+                                                    {
+                                                        "mur":  "est",
+                                                        "decalage":  -0.4,
+                                                        "largeur":  5.2,
+                                                        "hauteur":  2.9
+                                                    },
+                                                    {
+                                                        "mur":  "ouest",
+                                                        "decalage":  -0.4,
+                                                        "largeur":  3.6,
+                                                        "hauteur":  3.2
+                                                    },
+                                                    {
+                                                        "mur":  "sud",
+                                                        "decalage":  0,
+                                                        "largeur":  3,
+                                                        "hauteur":  3.2
+                                                    }
+                                                ]
+                                 },
+                       "objets":  [
+                                      {
+                                          "m":  "base\\environment\\architecture\\common\\int\\int_nkt_jp_corridor_a\\int_nkt_jp_corridor_a_reception_desk_l300_a.mesh",
+                                          "p":  [
+                                                    -2.4,
+                                                    3.6
+                                                ],
+                                          "yaw":  -90,
+                                          "col":  true,
+                                          "n":  "ncpd_lc_hall_accueil"
+                                      },
+                                      {
+                                          "m":  "base\\environment\\architecture\\common\\int\\int_nkt_jp_corridor_a\\int_nkt_jp_corridor_a_reception_desk_l300_a.mesh",
+                                          "p":  [
+                                                    -2.4,
+                                                    6.6
+                                                ],
+                                          "yaw":  -90,
+                                          "col":  true,
+                                          "n":  "ncpd_lc_hall_accueil"
+                                      }
+                                  ],
+                       "vue":  {
+                                   "de":  [
+                                              4.5,
+                                              -6.5,
+                                              2.2
+                                          ],
+                                   "vers":  [
+                                                -4,
+                                                2,
+                                                1.2
+                                            ],
+                                   "fov":  85
+                               }
+                   },
+                   {
+                       "id":  "couloir",
+                       "nom":  "Couloir central",
+                       "salle":  {
+                                     "centre":  [
+                                                    -18.65,
+                                                    -0.4,
+                                                    0
+                                                ],
+                                     "taille":  [
+                                                    24.7,
+                                                    3.7
+                                                ],
+                                     "hauteur":  4.0,
+                                     "inverser_murs":  true,
+                                     "sol":  "base\\environment\\architecture\\common\\int\\int_ent_industrial_a\\int_ent_industrial_a_floor_l300_a.mesh",
+                                     "mur":  "base\\environment\\architecture\\common\\int\\int_common_techpanel_a\\int_common_techpanel_a_wall_h400_l100_a.mesh",
+                                     "plafond":  "base\\environment\\architecture\\common\\int\\int_common_a\\int_common_a_ceiling_tiles_a_l300_w300_a.mesh",
+                                     "lumieres":  6,
+                                     "k":  6800,
+                                     "i":  700,
+                                     "portes":  [
+                                                    {
+                                                        "hauteur":  3.2,
+                                                        "decalage":  0,
+                                                        "largeur":  3.6,
+                                                        "mur":  "est"
+                                                    },
+                                                    {
+                                                        "hauteur":  2.6,
+                                                        "decalage":  8.9,
+                                                        "largeur":  1.6,
+                                                        "mur":  "nord"
+                                                    },
+                                                    {
+                                                        "hauteur":  2.8,
+                                                        "decalage":  -3.4,
+                                                        "largeur":  2.4,
+                                                        "mur":  "nord"
+                                                    },
+                                                    {
+                                                        "hauteur":  3,
+                                                        "decalage":  4.65,
+                                                        "largeur":  3,
+                                                        "mur":  "sud"
+                                                    },
+                                                    {
+                                                        "hauteur":  3,
+                                                        "decalage":  -8,
+                                                        "largeur":  2.4,
+                                                        "mur":  "sud"
+                                                    }
+                                                ]
+                                 },
+                       "vue":  {
+                                   "de":  [
+                                              -7.5,
+                                              -0.4,
+                                              1.8
+                                          ],
+                                   "vers":  [
+                                                -28,
+                                                -0.4,
+                                                1.4
+                                            ],
+                                   "fov":  80
+                               }
+                   },
+                   {
+                       "id":  "interrogatoire",
+                       "nom":  "Interrogatoire",
+                       "salle":  {
+                                     "centre":  [
+                                                    -9.5,
+                                                    8.0,
+                                                    0
+                                                ],
+                                     "taille":  [
+                                                    6.7,
+                                                    12.1
+                                                ],
+                                     "hauteur":  4.0,
+                                     "inverser_murs":  true,
+                                     "sol":  "base\\environment\\architecture\\common\\int\\int_ent_industrial_a\\int_ent_industrial_a_floor_l300_a.mesh",
+                                     "mur":  "base\\environment\\architecture\\common\\int\\int_common_techpanel_a\\int_common_techpanel_a_wall_h400_l100_a.mesh",
+                                     "plafond":  "base\\environment\\architecture\\common\\int\\int_common_a\\int_common_a_ceiling_tiles_a_l300_w300_a.mesh",
+                                     "lumieres":  2,
+                                     "k":  5200,
+                                     "i":  500,
+                                     "portes":  [
+                                                    {
+                                                        "mur":  "sud",
+                                                        "decalage":  0,
+                                                        "largeur":  1.6,
+                                                        "hauteur":  2.6
+                                                    }
+                                                ]
+                                 }
+                   },
+                   {
+                       "id":  "dd",
+                       "nom":  "DD - division des detectives",
+                       "salle":  {
+                                     "centre":  [
+                                                    -22.15,
+                                                    8.0,
+                                                    0
+                                                ],
+                                     "taille":  [
+                                                    17.7,
+                                                    12.1
+                                                ],
+                                     "hauteur":  4.4,
+                                     "inverser_murs":  true,
+                                     "sol":  "base\\environment\\architecture\\common\\int\\int_ent_industrial_a\\int_ent_industrial_a_floor_l300_a.mesh",
+                                     "mur":  "base\\environment\\architecture\\common\\int\\int_common_techpanel_a\\int_common_techpanel_a_wall_h400_l100_a.mesh",
+                                     "plafond":  "base\\environment\\architecture\\common\\int\\int_common_a\\int_common_a_ceiling_tiles_a_l300_w300_a.mesh",
+                                     "lumieres":  6,
+                                     "k":  6500,
+                                     "i":  800,
+                                     "portes":  [
+                                                    {
+                                                        "mur":  "sud",
+                                                        "decalage":  0.1,
+                                                        "largeur":  2.4,
+                                                        "hauteur":  2.8
+                                                    }
+                                                ]
+                                 }
+                   },
+                   {
+                       "id":  "maxtac",
+                       "nom":  "MaxTac - elite",
+                       "salle":  {
+                                     "centre":  [
+                                                    -14.0,
+                                                    -19.2,
+                                                    0
+                                                ],
+                                     "taille":  [
+                                                    15.7,
+                                                    33.3
+                                                ],
+                                     "hauteur":  5.0,
+                                     "inverser_murs":  true,
+                                     "sol":  "base\\environment\\architecture\\common\\int\\int_ent_industrial_a\\int_ent_industrial_a_floor_l300_a.mesh",
+                                     "mur":  "base\\environment\\architecture\\common\\int\\int_common_techpanel_a\\int_common_techpanel_a_wall_h400_l100_a.mesh",
+                                     "plafond":  "base\\environment\\architecture\\common\\int\\int_common_a\\int_common_a_ceiling_tiles_a_l300_w300_a.mesh",
+                                     "lumieres":  10,
+                                     "k":  7500,
+                                     "i":  900,
+                                     "portes":  [
+                                                    {
+                                                        "mur":  "nord",
+                                                        "decalage":  0,
+                                                        "largeur":  3.0,
+                                                        "hauteur":  3.0
+                                                    },
+                                                    {
+                                                        "mur":  "est",
+                                                        "decalage":  -2,
+                                                        "largeur":  3.0,
+                                                        "hauteur":  3.0
+                                                    }
+                                                ]
+                                 }
+                   },
+                   {
+                       "id":  "arsenal",
+                       "nom":  "Arsenal MaxTac (vue sur les vitres inclinees)",
+                       "salle":  {
+                                     "centre":  [
+                                                    0,
+                                                    -22.0,
+                                                    0
+                                                ],
+                                     "taille":  [
+                                                    11.7,
+                                                    27.7
+                                                ],
+                                     "hauteur":  5.0,
+                                     "inverser_murs":  true,
+                                     "sol":  "base\\environment\\architecture\\common\\int\\int_ent_industrial_a\\int_ent_industrial_a_floor_l300_a.mesh",
+                                     "mur":  "base\\environment\\architecture\\common\\int\\int_common_techpanel_a\\int_common_techpanel_a_wall_h400_l100_a.mesh",
+                                     "plafond":  "base\\environment\\architecture\\common\\int\\int_common_a\\int_common_a_ceiling_tiles_a_l300_w300_a.mesh",
+                                     "lumieres":  8,
+                                     "k":  7500,
+                                     "i":  900,
+                                     "portes":  [
+                                                    {
+                                                        "mur":  "nord",
+                                                        "decalage":  0,
+                                                        "largeur":  3.0,
+                                                        "hauteur":  3.2
+                                                    },
+                                                    {
+                                                        "mur":  "ouest",
+                                                        "decalage":  0.8,
+                                                        "largeur":  3.0,
+                                                        "hauteur":  3.0
+                                                    },
+                                                    {
+                                                        "mur":  "sud",
+                                                        "decalage":  0,
+                                                        "largeur":  10.5,
+                                                        "hauteur":  4.6
+                                                    }
+                                                ]
+                                 }
+                   },
+                   {
+                       "id":  "agents",
+                       "nom":  "Agents (patrouille, route)",
+                       "salle":  {
+                                     "centre":  [
+                                                    -26.65,
+                                                    -19.2,
+                                                    0
+                                                ],
+                                     "taille":  [
+                                                    8.7,
+                                                    33.3
+                                                ],
+                                     "hauteur":  4.4,
+                                     "inverser_murs":  true,
+                                     "sol":  "base\\environment\\architecture\\common\\int\\int_ent_industrial_a\\int_ent_industrial_a_floor_l300_a.mesh",
+                                     "mur":  "base\\environment\\architecture\\common\\int\\int_common_techpanel_a\\int_common_techpanel_a_wall_h400_l100_a.mesh",
+                                     "plafond":  "base\\environment\\architecture\\common\\int\\int_common_a\\int_common_a_ceiling_tiles_a_l300_w300_a.mesh",
+                                     "lumieres":  8,
+                                     "k":  6500,
+                                     "i":  800,
+                                     "portes":  [
+                                                    {
+                                                        "hauteur":  3,
+                                                        "decalage":  0,
+                                                        "largeur":  2.4,
+                                                        "mur":  "nord"
+                                                    }
+                                                ]
+                                 }
+                   }
+               ]
+}

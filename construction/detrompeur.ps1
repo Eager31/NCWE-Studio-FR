@@ -35,5 +35,5 @@ foreach ($o in @($q.objects)) {
     Write-Output ("{0} [{1}] {2} : {3} (vers l'intérieur {4:P0})" -f $o.name, $o.id, [IO.Path]::GetFileName($o.asset), $verdict, $(if ($tot) { $vers / $tot } else { 0 }))
 }
 $ann.Add(@{ type = 'point'; position = @($pi); color = 'green' })
-try { Ncwe 'annotate' @{ items = @($ann); duration = 300; clear = $true } | Out-Null } finally { Ncwe-Stop }
+try { Ncwe 'annotate' @{ items = $ann.ToArray(); duration = 300; clear = $true } | Out-Null } finally { Ncwe-Stop }
 Write-Output ("{0} surfaces contrôlées, {1} à l'envers (encadrées en rouge dans la vue pendant 5 min, point intérieur en vert)." -f $n, $mauvais)
