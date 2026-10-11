@@ -25,3 +25,4 @@ scan-*.tsv
 mods/
 
 traces.tsv
+scan-zones.tsv
