@@ -1,5 +1,7 @@
 ﻿// Outil « Tracé » (bouton 📐 sous le balai) : on clique des points au sol dans la vue 3D pour dessiner
-// des lignes-guides (murs, portes, vitres, escaliers…) que les outils de construction lisent ensuite.
+// des lignes-guides que les outils de construction lisent ensuite :
+//   mur · sol / plafond (contour fermé) · fenêtre ouverte (mur posé à l'envers : on voit dehors depuis l'intérieur, sans trou)
+//   fenêtre fermée · porte · escalier · autre
 //   clic : ajoute un point · Maj : angle droit par rapport au segment precedent · Entrée : termine la ligne
 //   Échap : annule la ligne en cours · ↶ : retire le dernier point
 // Fichier : traces.tsv (dossier du plugin) — nom, type, hauteur (m), points x;y;z separes par |
@@ -19,8 +21,8 @@ namespace NcweFr
     {
         const string TraceName = "NcweFrTrace";
         const string TraceClient = "Outil trace";
-        static readonly string[] TraceTypes = { "mur", "porte", "vitre", "escalier", "salle", "autre" };
-        static readonly string[] TraceColors = { "cyan", "orange", "lime", "yellow", "white", "magenta" };
+        static readonly string[] TraceTypes = { "mur", "sol", "plafond", "fenêtre ouverte", "fenêtre fermée", "porte", "escalier", "autre" };
+        static readonly string[] TraceColors = { "cyan", "white", "yellow", "lime", "green", "orange", "magenta", "red" };
 
         class TraceLine { public string Name, Type; public double Height; public List<double[]> Points = new List<double[]>(); }
         static readonly List<TraceLine> traceLines = new List<TraceLine>();
@@ -93,6 +95,7 @@ namespace NcweFr
             x.Append(" Background='{ThemeResource AcrylicInAppFillColorDefaultBrush}' BorderBrush='{ThemeResource CardStrokeColorDefaultBrush}'><StackPanel Spacing='8'>");
             x.Append("<TextBlock FontWeight='SemiBold' Text='📐 Tracé'/>");
             x.Append("<TextBox x:Name='name' PlaceholderText='Nom de la ligne (ex. mur hall nord)'/>");
+            x.Append("<TextBlock FontSize='11' Opacity='0.65' TextWrapping='Wrap' Text='Sol / plafond : contour fermé. Fenêtre ouverte : mur posé à l&apos;envers, on voit dehors depuis l&apos;intérieur (pas de trou).'/>");
             x.Append("<Grid ColumnSpacing='8'><Grid.ColumnDefinitions><ColumnDefinition Width='*'/><ColumnDefinition Width='Auto'/></Grid.ColumnDefinitions>");
             x.Append("<ComboBox x:Name='type' HorizontalAlignment='Stretch' SelectedIndex='0' ToolTipService.ToolTip='Type de ligne'>");
             foreach (string t in TraceTypes) x.Append("<ComboBoxItem Content='" + t + "'/>");
@@ -249,7 +252,8 @@ namespace NcweFr
                 if (l.Points.Count == 0) return;
                 if (sb.Length > 0) sb.Append(',');
                 if (l.Points.Count == 1) { sb.Append("{\"type\":\"point\",\"color\":" + Q(color) + ",\"position\":" + P(l.Points[0][0], l.Points[0][1], l.Points[0][2] + 0.1) + "}"); return; }
-                sb.Append("{\"type\":\"line\",\"color\":" + Q(color) + ",\"points\":[");
+                bool ferme = l.Type == "sol" || l.Type == "plafond";
+                sb.Append("{\"type\":\"line\",\"closed\":" + (ferme ? "true" : "false") + ",\"color\":" + Q(color) + ",\"points\":[");
                 for (int i = 0; i < l.Points.Count; i++) { if (i > 0) sb.Append(','); sb.Append(P(l.Points[i][0], l.Points[i][1], l.Points[i][2] + 0.1)); }
                 sb.Append("]}");
                 // hauteur : trait vertical au premier point

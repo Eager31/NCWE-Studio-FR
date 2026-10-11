@@ -66,3 +66,8 @@
 - **Tracés de l'utilisateur** : approximatifs et souvent verticaux (coins bas puis haut). Les traiter comme un guide : ligne au sol = plus longue suite de points bas, hauteur = du plus bas au plus haut, ignorer les points aberrants ; puis **caler sur le mur réel par rayons** (plusieurs hauteurs, lissage avec les voisins) et poser le doublage à 5 cm de la face intérieure.
 - **Murs du jeu épais** (1 à 2 m) : un décalage fixe met le doublage DANS le mur. Mesurer.
 - Vérifier chaque construction par rayons depuis l'intérieur (bonne face / mur nu) avant de dire que c'est fini.
+## Faire comme le jeu (analyse du 11/10 : appartement de V, Afterlife, NCPD Downtown, clinique Viktor)
+- **Grandes pièces** : le jeu pose peu de pièces, presque toutes de 3 m ou plus (56 à 100 %). Sols 3×6, 6×6, jusqu'à 25×25 m ; plafonds 6×6 m ; murs 3, 6 ou 12 m × 4 m de haut. Un étage du NCPD Downtown = 13 pièces.
+- **Rien sous 3 × 3 m** sauf raccord obligatoire (angle, poteau, fin de mur) ; finir une longueur avec UN module étiré, jamais une rangée de modules de 1 m (j'avais posé 2 700 panneaux de 1 m : refusé).
+- **Une même famille de matériaux par bâtiment** : les murs d'un lieu viennent du même ensemble (même dossier / même préfixe, ex. `common_megabuilding_interior_*`, `wat_lch_building_b_*`) et des mêmes apparences. Choisir l'ensemble d'après le bâtiment existant (relevé), s'y tenir pour murs, sols, plafonds, angles.
+- **Refaire au plus proche ce que fait le jeu** dans un lieu comparable avant d'inventer.
